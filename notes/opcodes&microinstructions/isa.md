@@ -19,7 +19,7 @@ Cycles count every microstep, including the fetch (step 0).
 | LD REG, Imm   |  0x04  |   -   |          Rd <-- Mem[0x00:Imm]           |    -     |     2     |
 | LD REG, MAR   |  0x05  |   -   |             Rd <-- Mem[MAR]             |    -     |     2     |
 | LD REG, XY    |  0x06  |   -   |             Rd <-- Mem[XY]              |    -     |     2     |
-| ST Imm, REG   |  0x07  |   -   |          Mem[0x00:Imm] <-- Rs           |    -     |    2*     |
+| ST Imm, A     |  0x07  |   -   |           Mem[0x00:Imm] <-- A           |    -     |     2     |
 | ST MAR, REG   |  0x08  |   -   |             Mem[MAR] <-- Rs             |    -     |     2     |
 | ST XY, REG    |  0x09  |   -   |             Mem[XY] <-- Rs              |    -     |     2     |
 | PUSH REG      |  0x0A  |   -   |     Mem[SP] <-- Rs<br>SP <-- SP - 1     |    -     |     2     |
@@ -84,13 +84,13 @@ Cycles count every microstep, including the fetch (step 0).
 - **Condition codes** (subOp of 0x1B and 0x1C): 0 = C, 1 = NC, 2 = Z, 3 = NZ, 4 = N, 5 = NN, 6 = V, 7 = NV. There is no `JCC MAR`, only `JCC XY` and `JCC label`.
 - **Direct jumps and calls** (`JMP label`, `JCC label`, `CALL label`) are 2-word instructions: word 1 has the opcode + the high byte of the target, word 2 has the opcode + the low byte. The CPU uses the MAR to hold the target before loading it into the PC, so **whatever was in the MAR is lost** after a direct jump or call (and after `RET`/`RTI` too, which also go through the MAR). More about this in `technicalities/(temp) jumps.md`.
 - **CALL** pushes PCH first and then PCL, so `RET` pops PCL first and then PCH. The pushed PC is always the address of the instruction right after the CALL.
+- **ST Imm** only works with the accumulator, because bits `[7:5]` are part of the zero-page address and can't select a register. To store any other register in the zero page, do `MOV A, REG` first (or use `ST MAR/XY, REG`). `LD Imm` works with every register. More about this in `technicalities/st-zeropage.md`.
 - **CP** does the same as SUB, but only updates the flags, A is not written.
 - **INC A / DEC A** don't use the carry, they force the carry-in: INC A is A + 0 + 1, and DEC A is A - 0 - 1.
 - **Free slots**: 0x02 subOp 6-7, 0x03 subOp 2-7, 0x1D subOp 6-7 and 0x1E subOp 5. Careful, these don't reset the micro-PC, so if one ever gets executed, it runs all 16 microsteps doing nothing (just the `PC_INC` of step 1).
 
 ### Known issues (*)
 
-- **ST Imm, REG**: the register file outputs the register selected by bits `[7:5]`, but in this instruction those bits are part of the zero-page address, so the register written in `[10:8]` is not the one that gets stored.
 - **AND / OR / XOR**: the 4 ALU flags are loaded together, so C and V also get loaded with whatever the 74382 outputs on a logic operation. Only Z and N are meaningful.
 - **ROR**: right now its microcode is exactly the same as SHR (`SHR_IN0` is never set), and shifts don't update the flags, so the bit shifted out doesn't go into C.
 - **HALT**: it only resets the micro-PC, and since step 1 still does `PC_INC`, it currently behaves like a NOP. It still needs the hardware to actually stop the clock.

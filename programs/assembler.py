@@ -191,10 +191,12 @@ def encode_instruction(mnemonic, tokens, symbol_table):
         elif target == "XY":
             return (0x09 << 11) | (r_src << 5)
         else:
-            # KNOWN ISSUE: REG_OE decodes the source from [7:5], which here is part of the
-            # zero-page address, so the register put in [10:8] isn't the one that gets output
+            # ST zp, A only: bits [7:5] are part of the address, so the CPU can't select
+            # a source register (see technicalities/st-zeropage.md)
+            if tokens[1] != "A":
+                raise SyntaxError(f"ST zp only works with A (use MOV A, {tokens[1]} first, or ST MAR/XY, {tokens[1]})")
             val = imm8(target, symbol_table)
-            return (0x07 << 11) | (r_src << 8) | (val & 0xFF)
+            return (0x07 << 11) | (val & 0xFF)
 
     if mnemonic == "PUSH":
         return (0x0A << 11) | (reg(tokens[0]) << 5)   # source register goes in [7:5] (REG_OE)

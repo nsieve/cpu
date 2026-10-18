@@ -50,6 +50,7 @@ nSPH_OE  = 41   # output SPH to the data bus
 nCLR_IRQ = 42   # clears the latch of the IRQ pending
 nV_OE    = 43   # output the interrupt vector to the address bus
 V_B0     = 44   # toggles bit 0 of the interrupt vector 0xFFFE/0xFFFF
+nACC_OE  = 45   # output the accumulator to the data bus, bypassing the source decoder (for ST zp, A)
 
 
 active_low_mask = (
@@ -61,7 +62,7 @@ active_low_mask = (
     (1 << nFL_OE)   | (1 << nFL_LD)   | (1 << nSP_INC)   |
     (1 << nSP_LD)   | (1 << nSP_OE)   | (1 << nSPL_OE)   |
     (1 << nSPH_OE)  | (1 << nCLR_IRQ) | (1 << nV_OE)     |
-    (1 << nMAR_INC)
+    (1 << nMAR_INC) | (1 << nACC_OE)
 )
 
 
@@ -179,9 +180,9 @@ def gen_microcode():
                     if microstep == 1:
                         control_word |= (1 << PC_OE) | (1 << nXYA_OE) | (1 << MEM_RD) | (1 << REG_LD) | (1 << nMPC_RST)
 
-                elif base_opcode == 7:  # ST zp(imm8), reg
-                    if microstep == 1:
-                        control_word |= (1 << PC_OE) | (1 << nIRA_OE) | (1 << nHBA_OE) | (1 << MEM_WR) | (1 << REG_OE) | (1 << nMPC_RST)
+                elif base_opcode == 7:  # ST zp(imm8), A
+                    if microstep == 1: # bits [7:5] are part of the address, so the accumulator is enabled directly
+                        control_word |= (1 << PC_OE) | (1 << nIRA_OE) | (1 << nHBA_OE) | (1 << MEM_WR) | (1 << nACC_OE) | (1 << nMPC_RST)
 
                 elif base_opcode == 8:  # ST MAR, reg
                     if microstep == 1:
