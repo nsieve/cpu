@@ -1,4 +1,4 @@
-# RESET BUFFER & LOGIC
+# Reset Buffer & Logic
 
 It's a 16-bit buffer that has the address `0xC000` hardwired in its inputs, meaning all bits are 0 except for the 2 MSB.
 This buffer is only activated when the reset button is pressed, but it needs the rising edge of the clock cycle to work, but the falling edge can be ignored.

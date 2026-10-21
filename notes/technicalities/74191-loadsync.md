@@ -1,4 +1,4 @@
-# 74191 LOAD SYNCHRONIZATION
+# 74191 Load Synchronization
 
 The 74191 ICs are 4-bit synchronous, reversible, up/down binary counters. Although they operate synchronously, the load control works asynchronously.
 

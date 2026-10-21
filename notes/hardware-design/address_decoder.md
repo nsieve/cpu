@@ -1,4 +1,4 @@
-# ADDRESS DECODER
+# Address Decoder
 
 The address decoder is a module which (as the name says) decodes the chip selects of each memory module. In order to understand it work, let's see the memory map of the CPU, which will clarify what it actually does:
 

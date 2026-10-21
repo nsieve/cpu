@@ -1,4 +1,4 @@
-# PROGRAM COUNTER
+# Program Counter
 
 ## Overview & Memory Layout
 
@@ -60,6 +60,6 @@ The 74161 is a synchronous, edge-triggered counter. Its outputs change only on t
 
 ## Design Justifications
 
-### 74161 instead of 74191
+### 74161 Instead of 74191
 
 The PC only needs to increment and load. It never needs to decrement. The 74161 is a dedicated up counter with parallel load, so it requires fewer control signals than the 74191. This makes the wiring simpler and the control logic smaller. The 74191 is still used for the Stack Pointer, MAR and XY register pair, because those need both increment and decrement.

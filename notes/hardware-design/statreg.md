@@ -1,4 +1,4 @@
-# STATUS REGISTER
+# Status Register
 
 ## Overview & Memory Layout
 
@@ -6,9 +6,9 @@ The Status Register (SR) is a 5-bit register that stores the four ALU condition 
 
 The register is not implemented as a single 5-bit register. It is split into two storage elements:
 
-- A **4-bit register** for the ALU condition flags
+- A 4-bit register for the ALU condition flags
     
-- A **1-bit D flip-flop** for the Interrupt flag
+- A 1-bit D flip-flop for the Interrupt flag
 
 This division is intentional. The ALU flags and the Interrupt flag do not always update at the same time. Some operations must preserve the condition flags while still allowing the Interrupt flag to change, and vice versa. Separate storage with separate load controls makes this possible without adding extra gating logic to mask individual writes.
 
@@ -20,18 +20,18 @@ The sixth bit (bit 5) is the B flag, which is not stored in the register. It is 
 
 The Status Register has two input sources, selected by a pair of 74157 2-to-1 multiplexers:
 
-- **ALU / Control Unit** — supplies the condition flags and the Interrupt flag during normal execution.
+- ALU / Control Unit — supplies the condition flags and the Interrupt flag during normal execution.
     
-- **Data Bus** — supplies the saved status value during a pop from the stack (context restore).
+- Data Bus — supplies the saved status value during a pop from the stack (context restore).
     
 
 The MUX select line is shared by both 74157s. Because the register is 5 bits wide, two 74157 packages are required. The first package handles four bits; the second package handles the fifth bit and leaves the remaining three muxes unused.
 
 After the MUX, the data is stored in:
 
-- A **4-bit register** for the ALU flags (Z, C, N, V)
+- A 4-bit register for the ALU flags (Z, C, N, V)
     
-- A **1-bit D flip-flop** for the Interrupt flag (I)
+- A 1-bit D flip-flop for the Interrupt flag (I)
     
 
 The register outputs feed directly into the Control Unit, so the flags can be evaluated for conditional branches and interrupt decisions. The same outputs are also connected to a tri-state buffer that drives the data bus. This allows the CPU to push the Status Register onto the stack during an interrupt or a context save.

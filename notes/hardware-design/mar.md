@@ -1,4 +1,4 @@
-# MEMORY ADDRESS REGISTER (MAR)
+# Memory Address Register (MAR)
 
 ## Overview & Memory Layout
 
@@ -43,7 +43,7 @@ The MAR counters are synchronous and edge-triggered. Their outputs change only o
 
 ## Design Justifications
 
-### Dedicated Up/Down Counter instead of a Plain Register
+### Dedicated Up/Down Counter Instead of a Plain Register
 
 A plain register would only enable me to save data and output address. Without an incrementing/decrementing MAR, copying a block of RAM from one buffer to another would require constantly updating MAR byte-by-byte using register transfers.
 In order to avoid using more tri-state buffers and wire the MAR output to the data bus, making the ALU compute the INC/DEC, I decided to make the MAR itself an up/down counter, which saves cycles and keeps the ALU free for arithmetic.

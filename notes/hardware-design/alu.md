@@ -1,4 +1,4 @@
-# ARITHMETIC LOGIC UNIT
+# Arithmetic Logic Unit
 
 Since this is an accumulator-based architecture, I want to start with the Arithmetic Logic Unit. This is the single most important component of the CPU, and designing it first establishes the core datapath that the microcode unit, the register file, etc. will build upon.
 ## Hardware Architectural Overview
@@ -13,7 +13,7 @@ Block diagram of the ALU module:
 - Accumulator output: Although its constantly outputting to the input A of the ALU, it's connected to 3 buffers, which enable normal output, shift right or roll over right right through carry, all to the data bus.
 ## Control Pins & Operation Table
 
-### 74382 Core logic (ALU)
+### 74382 Core Logic (ALU)
 
 | Instruction | S2  | S1  | S0  | Cin      | Selected Operation |
 | ----------- | --- | --- | --- | -------- | ------------------ |

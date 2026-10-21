@@ -1,4 +1,4 @@
-# STACK POINTER
+# Stack Pointer
 
 ## Overview & Memory Layout
 
@@ -51,13 +51,13 @@ The Stack Pointer is first pointing to the next address to be pushed, so the fir
 Attempting to do a single-cycle `POP` is not possible, because the SP is pointing at an empty memory slot, so to solve this, the instruction is done in two steps.
 First, the pointer is adjusted by doing an increment, and on the second cycle, the RAM can read the value because it is now pointing at the last pushed data.
 It is for the exact same reason that the `PUSH` is able to be performed in one cycle that the `POP` is not.
-## Design justifications
+## Design Justifications
 
-### Dedicated Counters instead of ALU Routing
+### Dedicated Counters Instead of ALU Routing
 
 Using dedicated 74191 counters allow for `PUSH` and `POP` to modify addresses automatically without passing SP through the main ALU, keeping the ALU free for arithmetic and saving clock cycles.
 
-### 16-bit SP instead of 8-bit SP
+### 16-bit SP Instead of 8-bit SP
 
 Having a full 16-bit SP allows the stack to reside anywhere in the 64KB address space rather than locking it in one place and having only 256 memory bytes of capacity.
 

@@ -1,4 +1,4 @@
-# INSTRUCTION SET
+# Instruction Set
 
 Cycles represent the "steps" in the micro-program counter. They start at 0 and can go up to 7, but most instructions only take 2 cycles.
 

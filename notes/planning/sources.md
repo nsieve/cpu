@@ -1,4 +1,4 @@
-# Sources of information
+# Sources of Information
 
 For a better documentation of the modules:
 "AVR Microcontroller and Embedded Systems" by Mazidi

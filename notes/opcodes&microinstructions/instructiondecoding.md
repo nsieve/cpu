@@ -1,10 +1,10 @@
-# INSTRUCTION DECODING & SUBEXTENDED OPCODE
+# Instruction Decoding & Subextended Opcode
 
 Instructions are loaded directly from memory into two 8-bit registers. The lower one, called IRLB holds bits `[7:0]`, while the higher one, IRHB holds bits `[15:8]`.
 
 This division is done so that the IRLB is the one outputting the data onto the data-bus only when the buffer allows it, and IRHB is constantly outputting its data to the control unit.
 
-## Bit Encoding 
+## Bit Encoding
 
 Although the entire 8 bits are connected to the control unit, for most of the instructions, it is as if there are only 5 connected (bits `[15:11]`). This is because I originally planned on having only 5 bits as opcode, while the other 3 (bits `[10:8]`) work as the decoder for the register to be written to. 
 
@@ -28,8 +28,8 @@ The way these bits are allocated is the following:
 
 | Instruction class                         | Opcode [15:8] | Rdst [10:8]            | Rsrc [7:5]  | Imm [7:0]      |
 | ----------------------------------------- | ------------- | ---------------------- | ----------- | -------------- |
-| **Dual Register** <br>`ADD R1, R2`        | 5-bit Op      | Target Rdst            | Source Rsrc | (ignored)      |
-| **Register-immediate** <br>`MOV R1, 0x12` | 5-bit Op      | Target Rdst            | (ignored)   | 8-bit data     |
-| **Single-Register** <br>`INC R1, PUSH R2` | 5-bit Op      | Target Rdst            | (ignored)   | (ignored)      |
-| **Conditional Jump** <br>`JZ 0x80`        | 5-bit Op      | Conditional Code (0-7) | (ignored)   | Target address |
-| **No-operand** <br>`NOP, HALT`            | 8-bit Op      | (ignored)              | (ignored)   | (ignored)      |
+| Dual Register <br>`ADD R1, R2`        | 5-bit Op      | Target Rdst            | Source Rsrc | (ignored)      |
+| Register-immediate <br>`MOV R1, 0x12` | 5-bit Op      | Target Rdst            | (ignored)   | 8-bit data     |
+| Single-Register <br>`INC R1, PUSH R2` | 5-bit Op      | Target Rdst            | (ignored)   | (ignored)      |
+| Conditional Jump <br>`JZ 0x80`        | 5-bit Op      | Conditional Code (0-7) | (ignored)   | Target address |
+| No-operand <br>`NOP, HALT`            | 8-bit Op      | (ignored)              | (ignored)   | (ignored)      |

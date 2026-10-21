@@ -11,7 +11,7 @@ First of all, it was the slowest, because it had to execute 3 whole instructions
 Second, if a conditional jump's condition is NOT met, the instruction would still take as long as if the condition is met, purely because it would be checked at the last instruction.
 And third, and by far most importantly, if an interrupt is triggered, since it synchronizes on the microstep 0 (as well as other conditions), it could happen that the first or second instructions (loading MAR) are performed, and once the routine is finished and everything gets popped back, since the MAR is not pushed onto the stack, the values would be lost and therefore the instruction would be incorrect.
 
-### THE SOLUTION
+### The Solution
 
 Native 2-word jumps.
 Now, not only the indirect jumps (JMP MAR, JMP XY) are in the instruction set, but the direct jumps are not treated as a pseudoinstruction, they are a 2-word instruction.
@@ -23,12 +23,12 @@ It would be decoded like this:
 
 This way, all three problems from before are fixed, because, since it's treated as two instructions, the microsteps are less, but also, because the condition check is done at the beginning, if conditions are not met, it quickly increments the pc again to point at the next instruction, and most importantly, since it is treated as 1 instruction, the microprogram counter is not reset until the entire instruction is performed, meaning that if interrupt happens on the middle of the execution, it would wait until the instruction is finished, eliminating MAR register corruption.
 
-### DIRECT VS INDIRECT
+### Direct vs Indirect
 
 So now there are two kinds of jumps (and calls):
 
-- **Direct** (`JMP label`, `JCC label`, `CALL label`): the target address is written inside the two words of the instruction itself. The CPU still needs a 16-bit register to hold the address before loading it into the PC (the PC loads from the address bus, and only MAR, XY and SP can drive a full 16-bit address there), so it uses the MAR as a scratch register. This means **after a direct jump or call, whatever was in the MAR is lost**, so the MAR should never be trusted to keep a value across one.
-- **Indirect** (`JMP MAR`, `JMP XY`, `JCC XY`, `CALL MAR`, `CALL XY`): the CPU jumps to whatever address is already in that register. These are 1-word instructions.
+- Direct (`JMP label`, `JCC label`, `CALL label`): the target address is written inside the two words of the instruction itself. The CPU still needs a 16-bit register to hold the address before loading it into the PC (the PC loads from the address bus, and only MAR, XY and SP can drive a full 16-bit address there), so it uses the MAR as a scratch register. This means after a direct jump or call, whatever was in the MAR is lost, so the MAR should never be trusted to keep a value across one.
+- Indirect (`JMP MAR`, `JMP XY`, `JCC XY`, `CALL MAR`, `CALL XY`): the CPU jumps to whatever address is already in that register. These are 1-word instructions.
 
 To keep them organized, all jumps and calls live in opcodes 27 to 29:
 

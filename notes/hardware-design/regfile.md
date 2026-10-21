@@ -1,4 +1,4 @@
-# REGISTER FILE
+# Register File
 
 The register file consists of 7, 8-bit GPRs, from which the first 5 are regular registers and the last two work as a up/down counter that can output data to the address bus in 1 cycle.
 
@@ -6,7 +6,7 @@ Bits `[10:8]` are connected to the demux of the register destination, and bits `
 
 (picture of the block diagram)
 
-## XY Registers as a pointer pair
+## XY Registers as a Pointer Pair
 
 The X and Y registers work as normal registers, since they can be accessed the same as any other register, but the key difference is that they can output at the same time to the 16-bit address bus.
 The decision to have both X and Y registers be up/down counters is that, given that incrementing any register that's not the accumulator takes 3 instructions, and since these two registers work as a pointer, it's very common to need a quick increment or decrement, and having it ingrained was practically free (in terms of hardware), so I decided to make them work that way.

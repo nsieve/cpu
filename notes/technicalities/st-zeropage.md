@@ -1,6 +1,6 @@
-# ST ZERO-PAGE ONLY WITH THE ACCUMULATOR
+# ST Zero-Page Only with the Accumulator
 
-### THE PROBLEM
+### The Problem
 
 `ST Imm, REG` was supposed to store any register into the zero page (`0x0000-0x00FF`), but it can't work that way.
 
@@ -10,14 +10,14 @@ This doesn't happen with the loads (`LD Imm, REG`) because those use the destina
 
 The microcode can't fix this, because the bits that go into the decoder come straight from the instruction register, there is no way to change which bits it reads.
 
-### OPTIONS I HAD
+### Options I Had
 
-- **Multiplex the decoder input** between `[7:5]` and `[10:8]` with a 74157 and a new control bit. It works with every register, but I didn't like adding a mux on the path of the register file.
-- **Remove `ST Imm`** and always store through the MAR (`MOV MARH`, `MOV MARL`, `ST MAR, REG`). No hardware, but it's 3 instructions instead of 1.
-- **Make the zero page 32 bytes** and use `[4:0]` as the address. It doesn't really work, because the IR puts the whole lower byte on the address bus, so the register bits would end up inside the address.
-- **Make it accumulator-only** (`ST Imm, A`), which is the one I chose.
+- Multiplex the decoder input between `[7:5]` and `[10:8]` with a 74157 and a new control bit. It works with every register, but I didn't like adding a mux on the path of the register file.
+- Remove `ST Imm` and always store through the MAR (`MOV MARH`, `MOV MARL`, `ST MAR, REG`). No hardware, but it's 3 instructions instead of 1.
+- Make the zero page 32 bytes and use `[4:0]` as the address. It doesn't really work, because the IR puts the whole lower byte on the address bus, so the register bits would end up inside the address.
+- Make it accumulator-only (`ST Imm, A`), which is the one I chose.
 
-### THE SOLUTION
+### The Solution
 
 There is a new control bit, `nACC_OE` (bit 45, on the third EPROM), which enables the output of the accumulator directly, without going through the source decoder.
 
