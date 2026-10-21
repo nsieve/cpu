@@ -14,7 +14,7 @@ Things that exist but don't work as intended.
 | `AND`/`OR`/`XOR` load garbage into C and V | hardware | The 4 ALU flags are loaded together, so C and V get whatever the 74382 outputs on a logic operation. Only Z and N are meaningful. |
 | Unused opcode slots run 16 empty cycles | microcode | They never set `nMPC_RST`. Free slots: opcode 2 subOp 6-7, opcode 3 subOp 2-7, opcode 29 subOp 6-7, opcode 30 subOp 5. |
 | MMIO and framebuffer decoding don't work as intended | `ADDR_DEC.dig` | From the old to-do list, check if it's still true. |
-| Interrupts don't work 100% of the time | interrupt module + microcode | They will be removed, see `technicalities/interrupts.md`. |
+| Interrupts don't work 100% of the time | interrupt module + microcode | They will be removed, see `design-decisions/interrupts.md`. |
 
 ## Missing
 
@@ -33,8 +33,8 @@ Not bugs, these are on purpose (or the price of something else), but they're eas
 
 | Limitation | Why |
 | ---------- | --- |
-| `ST zp` only works with A | Bits `[7:5]` are part of the address. See `technicalities/st-zeropage.md`. |
-| The MAR is lost after `JMP label`, `JCC label`, `CALL label`, `RET` and `RTI` | They use it to hold the target address. See `technicalities/(temp) jumps.md`. |
+| `ST zp` only works with A | Bits `[7:5]` are part of the address. See `design-decisions/st-zeropage.md`. |
+| The MAR is lost after `JMP label`, `JCC label`, `CALL label`, `RET` and `RTI` | They use it to hold the target address. See `design-decisions/jumps.md`. |
 | Only `ADD` and `AND` (and `CP`) have an immediate version | No opcodes left for the others. |
 | No `JCC MAR` | Only `JCC XY` and `JCC label`. |
 | Shifts don't update the flags | `SHR`/`ROR` use their own buffer, not the ALU. (`SHL` and `ROL` are really `ADD A, A` and `ADC A, A`, so they do.) |

@@ -7,7 +7,8 @@
 - maybe divide pseudoinstructions in single-instruction or multi-instruction?
 - document about fetch-execute overlap and in which instructions in a new document called structural hazard.
 - (once most documentation is finished) change the folder system to have each module its own folder with the notes, images and its real hardware implementation, datasheets, etc.
-- update README.md- remove everything interrupt-related (decision and reasons in `technicalities/interrupts.md`):
+- update README.md
+- remove everything interrupt-related (decision and reasons in `design-decisions/interrupts.md`):
 	- hardware: `INTERRUPTS.dig`, the I flag and `B_SET` in `FLAG_REG.dig`, and the leftover `IRQ_LATCH.dig` / `INT_VECT.dig`
 	- control unit: the IRQ address bit (bit 16) and the control bits `B_SET`, `I_SET`, `I_WRITE`, `nCLR_IRQ`, `nV_OE`, `V_B0`
 	- microcode: the IRQ sequence, `BRK`, `RTI`, `SEI`, `CLI`

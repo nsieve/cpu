@@ -1,10 +1,14 @@
-i dont know where to put this yet so i will write it here.
+# Direct Jumps
+
+### The Problem
 
 Initially, Jump instructions were only possible as indirect, meaning that if I wanted to jump to a label, the only possible way to do so in 1 line of code was to let the assembler handle it and treat it as a pseudo-instruction which decodes into three instructions:
 
+```
 MOV MARH, LABEL_HIGH
 MOV MARL, LABEL_LOW
 JCC/JMP MAR
+```
 
 This solution had many problems.
 First of all, it was the slowest, because it had to execute 3 whole instructions just for a jump label.
