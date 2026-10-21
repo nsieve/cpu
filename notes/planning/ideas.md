@@ -1,2 +1,5 @@
 - Be able to generate QR codes on the OLED screen(for example the QR link for the github repo)
 - Make a compiler (or adapt an existent one)
+- Serial port (UART) to talk with a PC: print text to a terminal for debugging, and later load programs into RAM without reprogramming the ROM. A UART chip (like a 6850) is easier but breaks the 74HC-only rule, and bit-banging it through an MMIO pin is cheap in chips but hard to time
+- Random numbers with a software generator (LFSR or xorshift, only needs shifts and XOR), seeded by reading the timer when the user presses the first key. This works if the timer is a free-running counter the program can read
+- 4-digit 7-segment display to show 16-bit values in hex, mainly for debugging the breadboard (it could replace the debug LEDs). Without interrupts the multiplexing has to be done in hardware: either all 74HC (two latches, a counter, a 74HC139 and an EEPROM as the hex decoder, about 5-6 chips) or a MAX7219 on the SPI port (one chip, but not 74HC)
