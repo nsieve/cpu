@@ -87,7 +87,7 @@
           <string>CLK</string>
         </entry>
       </elementAttributes>
-      <pos x="760" y="520"/>
+      <pos x="760" y="540"/>
     </visualElement>
     <visualElement>
       <elementName>Tunnel</elementName>
@@ -129,7 +129,7 @@
           <string>RST</string>
         </entry>
       </elementAttributes>
-      <pos x="760" y="540"/>
+      <pos x="760" y="560"/>
     </visualElement>
     <visualElement>
       <elementName>PC.dig</elementName>
@@ -2158,6 +2158,30 @@
       <elementAttributes/>
       <pos x="-160" y="320"/>
     </visualElement>
+    <visualElement>
+      <elementName>Tunnel</elementName>
+      <elementAttributes>
+        <entry>
+          <string>NetName</string>
+          <string>nACC_OE</string>
+        </entry>
+      </elementAttributes>
+      <pos x="1600" y="840"/>
+    </visualElement>
+    <visualElement>
+      <elementName>Tunnel</elementName>
+      <elementAttributes>
+        <entry>
+          <string>rotation</string>
+          <rotation rotation="2"/>
+        </entry>
+        <entry>
+          <string>NetName</string>
+          <string>nACC_OE</string>
+        </entry>
+      </elementAttributes>
+      <pos x="760" y="520"/>
+    </visualElement>
   </visualElements>
   <wires>
     <wire>
@@ -2241,16 +2265,16 @@
       <p2 x="1040" y="520"/>
     </wire>
     <wire>
-      <p1 x="760" y="520"/>
-      <p2 x="780" y="520"/>
-    </wire>
-    <wire>
       <p1 x="240" y="520"/>
       <p2 x="560" y="520"/>
     </wire>
     <wire>
       <p1 x="-80" y="520"/>
       <p2 x="-60" y="520"/>
+    </wire>
+    <wire>
+      <p1 x="760" y="520"/>
+      <p2 x="780" y="520"/>
     </wire>
     <wire>
       <p1 x="1060" y="-140"/>
@@ -2405,16 +2429,16 @@
       <p2 x="500" y="920"/>
     </wire>
     <wire>
+      <p1 x="760" y="540"/>
+      <p2 x="780" y="540"/>
+    </wire>
+    <wire>
       <p1 x="-240" y="540"/>
       <p2 x="-160" y="540"/>
     </wire>
     <wire>
       <p1 x="1020" y="540"/>
       <p2 x="1040" y="540"/>
-    </wire>
-    <wire>
-      <p1 x="760" y="540"/>
-      <p2 x="780" y="540"/>
     </wire>
     <wire>
       <p1 x="460" y="540"/>
@@ -2591,6 +2615,10 @@
     <wire>
       <p1 x="480" y="940"/>
       <p2 x="500" y="940"/>
+    </wire>
+    <wire>
+      <p1 x="760" y="560"/>
+      <p2 x="780" y="560"/>
     </wire>
     <wire>
       <p1 x="1240" y="560"/>
@@ -2791,6 +2819,10 @@
     <wire>
       <p1 x="240" y="840"/>
       <p2 x="660" y="840"/>
+    </wire>
+    <wire>
+      <p1 x="1580" y="840"/>
+      <p2 x="1600" y="840"/>
     </wire>
     <wire>
       <p1 x="500" y="200"/>
