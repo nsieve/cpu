@@ -19,7 +19,7 @@ Cycles count every microstep, including the fetch (step 0).
 | LD REG, Imm   |  0x04  |   -   |          Rd <-- Mem[0x00:Imm]           |    -     |     2     |
 | LD REG, MAR   |  0x05  |   -   |             Rd <-- Mem[MAR]             |    -     |     2     |
 | LD REG, XY    |  0x06  |   -   |             Rd <-- Mem[XY]              |    -     |     2     |
-| ST Imm, A     |  0x07  |   -   |           Mem[0x00:Imm] <-- A           |    -     |     2     |
+| ST Imm, REG   |  0x07  |   -   |          Mem[0x00:Imm] <-- Rs           |    -     |     2     |
 | ST MAR, REG   |  0x08  |   -   |             Mem[MAR] <-- Rs             |    -     |     2     |
 | ST XY, REG    |  0x09  |   -   |             Mem[XY] <-- Rs              |    -     |     2     |
 | PUSH REG      |  0x0A  |   -   |     Mem[SP] <-- Rs<br>SP <-- SP - 1     |    -     |     2     |
@@ -68,11 +68,7 @@ Cycles count every microstep, including the fetch (step 0).
 | DEC SP        |  0x1E  |  0x4  |              SP <-- SP - 1              |    -     |     2     |
 | MOV X, SPH    |  0x1E  |  0x6  |                X <-- SPH                |    -     |     2     |
 | MOV Y, SPL    |  0x1E  |  0x7  |                Y <-- SPL                |    -     |     2     |
-| BRK           |  0x1F  |  0x0  |  push PC, FR (B=1)<br>PC <-- vector      |    I     |    9*     |
 | RET           |  0x1F  |  0x1  |          SP + 2<br>PC <-- Mem[SP]         |    -     |     5     |
-| RTI           |  0x1F  |  0x2  |      FR <-- pop<br>PC <-- pop            |   all    |    6*     |
-| SEI           |  0x1F  |  0x3  |                  I = 1                  |    I     |     2     |
-| CLI           |  0x1F  |  0x4  |                  I = 0                  |    I     |     2     |
 | PUSHF         |  0x1F  |  0x5  |     Mem[SP] <-- FR<br>SP <-- SP - 1     |    -     |     2     |
 | POPF          |  0x1F  |  0x6  |     SP <-- SP + 1<br>FR <-- Mem[SP]     |  Z,C,N,V |    3*     |
 | HALT          |  0x1F  |  0x7  |                HALT mPC                 |    -     |    2*     |
@@ -82,20 +78,19 @@ Cycles count every microstep, including the fetch (step 0).
 ### Notes
 
 - Condition codes (subOp of 0x1B and 0x1C): 0 = C, 1 = NC, 2 = Z, 3 = NZ, 4 = N, 5 = NN, 6 = V, 7 = NV. There is no `JCC MAR`, only `JCC XY` and `JCC label`.
-- Direct jumps and calls (`JMP label`, `JCC label`, `CALL label`) are 2-word instructions: word 1 has the opcode + the high byte of the target, word 2 has the opcode + the low byte. The CPU uses the MAR to hold the target before loading it into the PC, so whatever was in the MAR is lost after a direct jump or call (and after `RET`/`RTI` too, which also go through the MAR). More about this in `design-decisions/jumps.md`.
+- Direct jumps and calls (`JMP label`, `JCC label`, `CALL label`) are 2-word instructions: word 1 has the opcode + the high byte of the target, word 2 has the opcode + the low byte. The CPU uses the MAR to hold the target before loading it into the PC, so whatever was in the MAR is lost after a direct jump or call (and after `RET` too, which also goes through the MAR). More about this in `design-decisions/jumps.md`.
 - CALL pushes PCH first and then PCL, so `RET` pops PCL first and then PCH. The pushed PC is always the address of the instruction right after the CALL.
-- ST Imm only works with the accumulator, because bits `[7:5]` are part of the zero-page address and can't select a register. To store any other register in the zero page, do `MOV A, REG` first (or use `ST MAR/XY, REG`). `LD Imm` works with every register. More about this in `design-decisions/st-zeropage.md`.
+- ST Imm and LD Imm keep the register in bits `[10:8]`, because the whole lower byte is the zero-page address. For the store, the control bit `SRC_SEL` makes the source decoder read the register from `[10:8]` instead of `[7:5]`. More about this in `design-decisions/st-zeropage.md`.
 - CP does the same as SUB, but only updates the flags, A is not written.
 - INC A / DEC A don't use the carry, they force the carry-in: INC A is A + 0 + 1, and DEC A is A - 0 - 1.
-- Free slots: 0x02 subOp 6-7, 0x03 subOp 2-7, 0x1D subOp 6-7 and 0x1E subOp 5. Careful, these don't reset the micro-PC, so if one ever gets executed, it runs all 16 microsteps doing nothing (just the `PC_INC` of step 1).
+- Free slots: 0x02 subOp 6-7, 0x03 subOp 2-7, 0x1D subOp 6-7, 0x1E subOp 5 and 0x1F subOp 0, 2, 3, 4 (these last four were the interrupt instructions). If one gets executed, it works as a NOP: 2 cycles, and nothing changes except the PC.
 
 ### Known Issues (*)
 
 - AND / OR / XOR: the 4 ALU flags are loaded together, so C and V also get loaded with whatever the 74382 outputs on a logic operation. Only Z and N are meaningful.
 - ROR: right now its microcode is exactly the same as SHR (`SHR_IN0` is never set), and shifts don't update the flags, so the bit shifted out doesn't go into C.
 - HALT: it only resets the micro-PC, and since step 1 still does `PC_INC`, it currently behaves like a NOP. It still needs the hardware to actually stop the clock.
-- POPF: step 2 loads the flag register but doesn't set `FL_SEL`, so the flags get loaded from the ALU instead of from the data bus (RTI does set it).
-- BRK / RTI: interrupts don't work 100% of the time, and they will be removed (see `design-decisions/interrupts.md`).
+- POPF: step 2 loads the flag register but doesn't set `FL_SEL`, so the flags get loaded from the ALU instead of from the data bus.
 
 The full list of open problems is in `planning/issues.md`.
 

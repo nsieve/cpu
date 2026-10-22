@@ -249,7 +249,7 @@
         </entry>
         <entry>
           <string>Output Splitting</string>
-          <string>1,1,1,1,1,1</string>
+          <string>1,1,1,1</string>
         </entry>
       </elementAttributes>
       <pos x="400" y="-60"/>
@@ -515,10 +515,6 @@
     <wire>
       <p1 x="680" y="20"/>
       <p2 x="780" y="20"/>
-    </wire>
-    <wire>
-      <p1 x="420" y="20"/>
-      <p2 x="600" y="20"/>
     </wire>
     <wire>
       <p1 x="520" y="340"/>

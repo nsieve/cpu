@@ -12,12 +12,12 @@ An 8-bit CPU designed from scratch and built entirely from 74HC logic chips.
 
 - 8-bit data bus, 16-bit address bus (64 KB of memory)
 - Von Neumann, accumulator-based architecture
-- 32 opcodes that expand to 70 instructions using sub-opcodes
-- Microprogrammed control unit: 48 control bits on three 16-bit EPROMs, up to 16 microsteps per instruction
+- 32 opcodes that expand to 66 instructions using sub-opcodes
+- Microprogrammed control unit: 40 control bits on three 16-bit EPROMs, up to 16 microsteps per instruction
 - Most instructions take 2 cycles, because the fetch of the next instruction overlaps with the execution of the current one
 - 48 KB of RAM, 15 KB of ROM, a 1 KB framebuffer and 256 bytes of memory-mapped I/O
 - I/O: keyboard, timer and an SPI port for an OLED display
-- 81 logic chips so far (plus RAM, ROM and the three EPROMs)
+- 77 logic chips so far (plus RAM, ROM and the three EPROMs)
 - Designed and simulated in [Digital](https://github.com/hneemann/Digital), and being built on breadboards
 
 ## About the Project
@@ -28,7 +28,7 @@ The SFD-8 is also my Bachelor's Thesis. This repository holds everything: the si
 
 ## Architecture
 
-Every instruction is a 16-bit word stored in the ROM. In the first cycle, the Program Counter puts its address on the address bus and the word is loaded into the Instruction Register. The upper byte of the instruction (the opcode), the step of the Micro-Program Counter and the four flags together form the address of the three EPROMs of the Control Unit, and the 48 bits they output are the control signals for that step. In the second cycle the PC is incremented while the instruction executes, and most instructions finish right there.
+Every instruction is a 16-bit word stored in the ROM. In the first cycle, the Program Counter puts its address on the address bus and the word is loaded into the Instruction Register. The upper byte of the instruction (the opcode), the step of the Micro-Program Counter and the four flags together form the address of the three EPROMs of the Control Unit, and the bits they output are the control signals for that step. In the second cycle the PC is incremented while the instruction executes, and most instructions finish right there.
 
 Data moves over an 8-bit data bus, shared by the register file, the ALU, memory, the flags and the 8-bit halves of the PC, the MAR and the Stack Pointer. Addresses go over a 16-bit address bus, which can be driven by the PC, the MAR, the XY register pair, the Stack Pointer, or the lower byte of the instruction (with the upper byte forced to `0x00` for the zero page). The Address Decoder looks at the address and enables the RAM, the ROM, the framebuffer or the MMIO.
 
@@ -70,15 +70,15 @@ Instruction set:
 
 - [Instruction Set Architecture](notes/opcodes%26microinstructions/isa.md): every instruction, its opcode, cycles and flags
 - [Instruction Decoding](notes/opcodes%26microinstructions/instructiondecoding.md): how the 16-bit instruction word is split
-- [Control Bits](notes/opcodes%26microinstructions/controlbits.md): what each of the 48 control bits does (not written yet)
+- [Control Bits](notes/opcodes%26microinstructions/controlbits.md): what each of the 40 control bits does (not written yet)
 - [Memory Map](notes/hardware-design/memory_map.md)
 
 Design decisions:
 
-- [ST Zero-Page Only with the Accumulator](notes/design-decisions/st-zeropage.md)
+- [ST Zero-Page Source Register](notes/design-decisions/st-zeropage.md)
 - [Direct Jumps](notes/design-decisions/jumps.md)
 - [74191 Load Synchronization](notes/design-decisions/74191-loadsync.md)
-- [Interrupts (and Why I'm Removing Them)](notes/design-decisions/interrupts.md)
+- [Interrupts (and Why I Removed Them)](notes/design-decisions/interrupts.md)
 
 ## Repository Structure
 
@@ -115,7 +115,6 @@ The whole datapath works in the simulation, and every instruction has its microc
 - [x] Microcode for every instruction
 - [x] Assembler
 - [ ] Fix the known bugs (see [issues](notes/planning/issues.md))
-- [ ] Remove interrupts
 - [ ] Test every instruction
 - [ ] Document every module
 - [ ] Map the remaining generic gates to real chips
