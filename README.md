@@ -76,6 +76,7 @@ Instruction set:
 Design decisions:
 
 - [ST Zero-Page Source Register](notes/design-decisions/st-zeropage.md)
+- [Fetch-Execute Overlap](notes/design-decisions/fetch-execute-overlap.md)
 - [Direct Jumps](notes/design-decisions/jumps.md)
 - [74191 Load Synchronization](notes/design-decisions/74191-loadsync.md)
 - [Interrupts (and Why I Removed Them)](notes/design-decisions/interrupts.md)
