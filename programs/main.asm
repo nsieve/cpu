@@ -1,14 +1,10 @@
 ; ==============================================================================
-; Test Program: Direct Immediate Jumps & Interrupt Safety
+; Test Program: Direct Immediate Jumps
 ; ==============================================================================
-
-.ORG 0xFFF4
-DW IRQ ; irq vector
 
 .ORG 0xC000
 
 START:
-    SEI
     MOV MARL, 0xFF
     MOV MARH, 0x1F
     MOV A, 0x05
@@ -19,12 +15,6 @@ START:
     JZ TARGET_PASS
 
     HALT
-
-IRQ:
-    MOV X, 0x10
-    MOV Y, 0x44
-    LD A, MAR
-    JMP START
 
 TARGET_FAIL:
     ; Danger Zone: If JZ incorrectly jumps here on false, test halts.

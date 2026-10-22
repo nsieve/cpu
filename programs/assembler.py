@@ -16,14 +16,13 @@ JMP_COND_MAP = {
 }
 
 SYSTEM_OPS = {
-    "BRK": 0, "RET": 1, "RTI": 2, "RETI": 2,
-    "SEI": 3, "CLI": 4, "PUSHF": 5, "POPF": 6,
-    "HALT": 7
+    "RET": 1, "PUSHF": 5, "POPF": 6, "HALT": 7
 }
 
 DIRECTIVES_ORG  = [".ORG", "ORG"]
 DIRECTIVES_WORD = [".DW", "DW", ".WORD", "WORD", ".VEC", "VEC", ".VECTOR", "VECTOR"]
 DIRECTIVES_BYTE = [".DB", "DB", ".BYTE", "BYTE"]
+DIRECTIVES_RAW  = [".RAW", "RAW"]   # one whole 16-bit word as-is (for hand-encoded instructions)
 
 # ==============================================================================
 # TOKENIZER & PARSER HELPERS
@@ -191,12 +190,10 @@ def encode_instruction(mnemonic, tokens, symbol_table):
         elif target == "XY":
             return (0x09 << 11) | (r_src << 5)
         else:
-            # ST zp, A only: bits [7:5] are part of the address, so the CPU can't select
-            # a source register (see technicalities/st-zeropage.md)
-            if tokens[1] != "A":
-                raise SyntaxError(f"ST zp only works with A (use MOV A, {tokens[1]} first, or ST MAR/XY, {tokens[1]})")
+            # ST zp, reg: bits [7:5] are part of the address, so the source register
+            # goes in [10:8] and SRC_SEL switches the source decoder to read it from there
             val = imm8(target, symbol_table)
-            return (0x07 << 11) | (val & 0xFF)
+            return (0x07 << 11) | (r_src << 8) | (val & 0xFF)
 
     if mnemonic == "PUSH":
         return (0x0A << 11) | (reg(tokens[0]) << 5)   # source register goes in [7:5] (REG_OE)
@@ -280,6 +277,17 @@ def assemble(source_code, default_origin=0xC000):
                         current_address += 2
                     continue
 
+                if mnemonic in DIRECTIVES_RAW:
+                    for token in tokens[1:]:
+                        parsed_program.append({
+                            "line_num": line_num,
+                            "address": current_address,
+                            "type": "RAW",
+                            "val_str": token
+                        })
+                        current_address += 1
+                    continue
+
                 if mnemonic in DIRECTIVES_BYTE:
                     for token in tokens[1:]:
                         parsed_program.append({
@@ -321,6 +329,10 @@ def assemble(source_code, default_origin=0xC000):
                 word = (parse_val(item["val_str"], symbol_table) >> 8) & 0xFF
             elif itype == "DB":
                 word = imm8(item["val_str"], symbol_table)
+            elif itype == "RAW":
+                word = parse_val(item["val_str"], symbol_table)
+                if not 0 <= word <= 0xFFFF:
+                    raise ValueError(f"Value '{item['val_str']}' doesn't fit in 16 bits")
             else:
                 word = encode_instruction(item["mnemonic"], item["operands"], symbol_table)
         except Exception as e:

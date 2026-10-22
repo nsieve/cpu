@@ -38,19 +38,14 @@ nFL_LD   = 31   # loads the flag register
 
 # EPROM 3:
 FL_SEL   = 32   # mux that selects the flag register input between ALU and data bus (only first 4 flags)
-B_SET    = 33   # force B (break flag) to 1. used to distinguish hardware from software interrupts
-I_SET    = 34   # force I (interrupt flag) to 1. used in SEI/CLI instructions
-I_WRITE  = 35   # write the value of I_SET onto the 7474 flipflop
-nSP_INC  = 36   # increment the SP register
-SP_DIR   = 37   # 0 = INC, 1 = DEC
-nSP_LD   = 38   # load data from the address bus to the sp
-nSP_OE   = 39   # output SP to the address bus
-nSPL_OE  = 40   # output SPL to the data bus
-nSPH_OE  = 41   # output SPH to the data bus
-nCLR_IRQ = 42   # clears the latch of the IRQ pending
-nV_OE    = 43   # output the interrupt vector to the address bus
-V_B0     = 44   # toggles bit 0 of the interrupt vector 0xFFFE/0xFFFF
-nACC_OE  = 45   # output the accumulator to the data bus, bypassing the source decoder (for ST zp, A)
+nSP_INC  = 33   # increment the SP register
+SP_DIR   = 34   # 0 = INC, 1 = DEC
+nSP_LD   = 35   # load data from the address bus to the sp
+nSP_OE   = 36   # output SP to the address bus
+nSPL_OE  = 37   # output SPL to the data bus
+nSPH_OE  = 38   # output SPH to the data bus
+SRC_SEL  = 39   # source decoder input. 0 = IR[7:5], 1 = IR[10:8] (for ST zp, reg)
+# 40-47 unused
 
 
 active_low_mask = (
@@ -61,8 +56,7 @@ active_low_mask = (
     (1 << nXYA_OE)  | (1 << nALU_OE)  | (1 << nSHR_OE)   |
     (1 << nFL_OE)   | (1 << nFL_LD)   | (1 << nSP_INC)   |
     (1 << nSP_LD)   | (1 << nSP_OE)   | (1 << nSPL_OE)   |
-    (1 << nSPH_OE)  | (1 << nCLR_IRQ) | (1 << nV_OE)     |
-    (1 << nMAR_INC) | (1 << nACC_OE)
+    (1 << nSPH_OE)  | (1 << nMAR_INC)
 )
 
 
@@ -80,8 +74,18 @@ def check_condition(sub_opcode, z, c, n, v):
     return conditions.get(sub_opcode, False)
 
 
-# 17 address bits = 128k entries (0x20000)
-total_address = 1 << 17
+# (base opcode, subOp) pairs with no instruction. they end at step 1, so they work as a NOP
+FREE_SLOTS = (
+    {(2, 6), (2, 7)} |
+    {(3, sub) for sub in range(2, 8)} |
+    {(29, 6), (29, 7)} |
+    {(30, 5)} |
+    {(31, 0), (31, 2), (31, 3), (31, 4)}
+)
+
+
+# 16 address bits = 64k entries (0x10000)
+total_address = 1 << 16
 
 def gen_microcode():
     eprom1 = [0] * total_address
@@ -97,335 +101,277 @@ def gen_microcode():
         n_flag = bool((addr >> 14) & 1)      # Bit 14
         v_flag = bool((addr >> 15) & 1)      # Bit 15
 
-        irq_pending = bool((addr >> 16) & 1) # Bit 16
-
         base_opcode = (opcode >> 3) & 0x1F   # Bits 7:3
         sub_opcode  = opcode & 0x07          # Bits 2:0
 
         control_word = 0
 
-        if irq_pending:
-            if microstep == 0: # push PCH
-                control_word |= (1 << PC_OE) | (1 << nPCH_OE) | (1 << nSP_OE) | (1 << nSP_INC) | (1 << SP_DIR) | (1 << MEM_WR)
-            elif microstep == 1: # push PCL
-                control_word |= (1 << PC_OE) | (1 << nPCL_OE) | (1 << nSP_OE) | (1 << nSP_INC) | (1 << SP_DIR) | (1 << MEM_WR)
-            elif microstep == 2: # push flags (B = 0)
-                control_word |= (1 << PC_OE) | (1 << nFL_OE) | (1 << nSP_OE) | (1 << nSP_INC) | (1 << SP_DIR) | (1 << MEM_WR)
-            elif microstep == 3: # fetch vector low
-                control_word |= (1 << PC_OE) | (1 << nV_OE) | (1 << MEM_RD) | (1 << nIR_LD)
-            elif microstep == 4: # save in MARL
-                control_word |= (1 << nIRD_OE) | (1 << nMARL_LD)
-            elif microstep == 5: # fetch vector high
-                control_word |= (1 << PC_OE) | (1 << nV_OE) | (1 << V_B0) | (1 << MEM_RD) | (1 << nIR_LD)
-            elif microstep == 6: # save in MARH
-                control_word |= (1 << nIRD_OE) | (1 << nMARH_LD)
-            elif microstep == 7: # jump to vector & clear hardware IRQ latch
-                control_word |= (1 << PC_OE) | (1 << nPC_LD) | (1 << nMAR_OE)
-            elif microstep == 8: ## must happen before jumping (because now the pc is pointing to another opcode (how can if be fixed?))
-                control_word |= (1 << nMPC_RST) | (1 << I_WRITE) | (1 << I_SET) | (1 << nCLR_IRQ)
+        if microstep == 0:
+            control_word |= (1 << MEM_RD) | (1 << nIR_LD)
         else:
-            if microstep == 0:
-                control_word |= (1 << MEM_RD) | (1 << nIR_LD)
-            else:
-                if microstep == 1:
-                    control_word |= (1 << PC_INC)
+            if microstep == 1:
+                control_word |= (1 << PC_INC)
+                if (base_opcode, sub_opcode) in FREE_SLOTS:
+                    control_word |= (1 << nMPC_RST)
 
+            take_jump = check_condition(sub_opcode, z_flag, c_flag, n_flag, v_flag)
+
+            if base_opcode == 0:  # MOV REG
+                if microstep == 1:
+                    control_word |= (1 << nIRD_OE) | (1 << REG_LD) | (1 << nMPC_RST)
+
+            elif base_opcode == 1:  # MOV REG, REG
+                if microstep == 1:
+                    control_word |= (1 << REG_OE) | (1 << REG_LD) | (1 << nMPC_RST)
+
+            elif base_opcode == 2:
+                if sub_opcode == 0: # MOV MARL, Imm
+                    if microstep == 1:
+                        control_word |= (1 << nIRD_OE) | (1 << nMARL_LD) | (1 << nMPC_RST)
+                elif sub_opcode == 1: # MOV MARH, Imm
+                    if microstep == 1:
+                        control_word |= (1 << nIRD_OE) | (1 << nMARH_LD) | (1 << nMPC_RST)
+                elif sub_opcode == 2: # INC MAR
+                    if microstep == 1:
+                        control_word |= (1 << nMAR_INC) | (1 << nMPC_RST)
+                elif sub_opcode == 3: # DEC MAR
+                    if microstep == 1:
+                        control_word |= (1 << nMAR_INC) | (1 << MAR_DIR) | (1 << nMPC_RST)
+                elif sub_opcode == 4: # INC XY
+                    if microstep == 1:
+                        control_word |= (1 << nXY_INC) | (1 << nMPC_RST)
+                elif sub_opcode == 5: # DEC XY
+                    if microstep == 1:
+                        control_word |= (1 << nXY_INC) | (1 << XY_DIR) | (1 << nMPC_RST)
+
+            elif base_opcode == 3:
+                if sub_opcode == 0: # MOV MARL, REG
+                    if microstep == 1:
+                        control_word |= (1 << REG_OE) | (1 << nMARL_LD) | (1 << nMPC_RST)
+                elif sub_opcode == 1: # MOV MARH, REG
+                    if microstep == 1:
+                        control_word |= (1 << REG_OE) | (1 << nMARH_LD) | (1 << nMPC_RST)
+
+            elif base_opcode == 4:  # LD reg, Imm
+                if microstep == 1:
+                    control_word |= (1 << PC_OE) | (1 << nIRA_OE) | (1 << nHBA_OE) | (1 << MEM_RD) | (1 << REG_LD) | (1 << nMPC_RST)
+
+            elif base_opcode == 5:  # LD reg, MAR
+                if microstep == 1:
+                    control_word |= (1 << PC_OE) | (1 << nMAR_OE) | (1 << MEM_RD) | (1 << REG_LD) | (1 << nMPC_RST)
+
+            elif base_opcode == 6:  # LD reg, XY
+                if microstep == 1:
+                    control_word |= (1 << PC_OE) | (1 << nXYA_OE) | (1 << MEM_RD) | (1 << REG_LD) | (1 << nMPC_RST)
+
+            elif base_opcode == 7:  # ST zp(imm8), reg
+                if microstep == 1: # bits [7:5] are part of the address, so the source register is read from [10:8]
+                    control_word |= (1 << PC_OE) | (1 << nIRA_OE) | (1 << nHBA_OE) | (1 << MEM_WR) | (1 << REG_OE) | (1 << SRC_SEL) | (1 << nMPC_RST)
+
+            elif base_opcode == 8:  # ST MAR, reg
+                if microstep == 1:
+                    control_word |= (1 << PC_OE) | (1 << nMAR_OE) | (1 << MEM_WR) | (1 << REG_OE) | (1 << nMPC_RST)
+
+            elif base_opcode == 9:  # ST XY, reg
+                if microstep == 1:
+                    control_word |= (1 << PC_OE) | (1 << nXYA_OE) | (1 << MEM_WR) | (1 << REG_OE) | (1 << nMPC_RST)
+
+            elif base_opcode == 10: # PUSH reg
+                if microstep == 1:
+                    control_word |= (1 << PC_OE) | (1 << REG_OE) | (1 << nSP_OE) | (1 << nSP_INC) | (1 << SP_DIR) | (1 << MEM_WR) | (1 << nMPC_RST)
+
+            elif base_opcode == 11: # POP reg
+                if microstep == 1:
+                    control_word |= (1 << PC_OE) | (1 << nSP_OE) | (1 << nSP_INC)
+                elif microstep == 2:
+                    control_word |= (1 << PC_OE) | (1 << REG_LD) | (1 << nSP_OE) | (1 << MEM_RD) | (1 << nMPC_RST)
+
+            elif base_opcode == 12:  # ADD A, reg
+                if microstep == 1:
+                    control_word |= (1 << ALU_S0) | (1 << ALU_S1) | (1 << REG_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFL_LD) | (1 << nMPC_RST)
+
+            elif base_opcode == 13:  # ADD A, imm8
+                if microstep == 1:
+                    control_word |= (1 << ALU_S0) | (1 << ALU_S1) | (1 << nIRD_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFL_LD) | (1 << nMPC_RST)
+
+            elif base_opcode == 14:  # ADC A, reg
+                if microstep == 1:
+                    control_word |= (1 << ALU_S0) | (1 << ALU_S1) | (1 << REG_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFL_LD) | (1 << nMPC_RST)
+                    if c_flag:
+                        control_word |= (1 << ALU_CIN)
+
+            elif base_opcode == 15:  # SUB A, reg
+                if microstep == 1:
+                    control_word |= (1 << ALU_S1) | (1 << ALU_CIN) | (1 << REG_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFL_LD) | (1 << nMPC_RST)
+
+            elif base_opcode == 16:  # SBC A, reg
+                if microstep == 1:
+                    control_word |= (1 << ALU_S1) | (1 << REG_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFL_LD) | (1 << nMPC_RST)
+                    if c_flag:
+                        control_word |= (1 << ALU_CIN)
+
+            elif base_opcode == 17:  # AND A, reg
+                if microstep == 1:
+                    control_word |= (1 << ALU_S1) | (1 << ALU_S2) | (1 << REG_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFL_LD) | (1 << nMPC_RST)
+
+            elif base_opcode == 18:  # AND A, imm8
+                if microstep == 1:
+                    control_word |= (1 << ALU_S1) | (1 << ALU_S2) | (1 << nIRD_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFL_LD) | (1 << nMPC_RST)
+
+            elif base_opcode == 19:  # OR A, reg
+                if microstep == 1:
+                    control_word |= (1 << ALU_S0) | (1 << ALU_S2) | (1 << REG_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFL_LD) | (1 << nMPC_RST)
+
+            elif base_opcode == 20:  # XOR A, reg
+                if microstep == 1:
+                    control_word |= (1 << ALU_S2) | (1 << REG_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFL_LD) | (1 << nMPC_RST)
+
+            elif base_opcode == 21:  # INC A
+                if microstep == 1:
+                    control_word |= (1 << ALU_S0) | (1 << ALU_S1) | (1 << ALU_CIN) | (1 << nIRD_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFL_LD) | (1 << nMPC_RST)
+
+            elif base_opcode == 22:  # DEC A
+                if microstep == 1:
+                    control_word |= (1 << ALU_S1) | (1 << nIRD_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFL_LD) | (1 << nMPC_RST)
+
+            elif base_opcode == 23:  # SHR A
+                if microstep == 1:
+                    control_word |= (1 << nSHR_OE) | (1 << REG_LD) | (1 << nMPC_RST)
+
+            elif base_opcode == 24:  # ROR A
+                if microstep == 1:
+                    control_word |= (1 << nSHR_OE) | (1 << REG_LD) | (1 << nMPC_RST)
+
+            elif base_opcode == 25:  # CP A, reg
+                if microstep == 1:
+                    control_word |= (1 << ALU_S1) | (1 << ALU_CIN) | (1 << REG_OE) | (1 << nFL_LD) | (1 << nMPC_RST)
+
+            elif base_opcode == 26:  # CP A, imm
+                if microstep == 1:
+                    control_word |= (1 << ALU_S1) | (1 << ALU_CIN) | (1 << nIRD_OE) | (1 << nFL_LD) | (1 << nMPC_RST)
+
+            elif base_opcode == 27:  # JCC imm16
                 take_jump = check_condition(sub_opcode, z_flag, c_flag, n_flag, v_flag)
 
-                if base_opcode == 0:  # MOV REG
+                if microstep == 1:
+                    if take_jump: # load high byte into marh (and pc++ automatically)
+                        control_word |= (1 << nIRD_OE) | (1 << nMARH_LD)
+                    else: # Branch not taken: Skip Low Byte
+                        pass
+
+                elif microstep == 2:
+                    if take_jump: # Read second word and store in Instruction Register
+                        control_word |= (1 << MEM_RD) | (1 << nIR_LD)
+                    else: # Branch not taken: Skip High Byte and finish instruction (3 cycles total)
+                         control_word |= (1 << PC_INC) | (1 << nMPC_RST)
+
+                elif microstep == 3: # Load low byte into MARL and pc++
+                        control_word |= (1 << nIRD_OE) | (1 << nMARL_LD) | (1 << PC_INC)
+
+                elif microstep == 4: # Load destination from MAR into PC
+                    control_word |= (1 << PC_OE) | (1 << nPC_LD) | (1 << nMAR_OE) | (1 << nMPC_RST)
+
+            elif base_opcode == 28:  # JCC XY
+                if microstep == 1:
+                    if take_jump:
+                        control_word |= (1 << PC_OE) | (1 << nPC_LD) | (1 << nXYA_OE)
+                    control_word |= (1 << nMPC_RST)
+
+            elif base_opcode == 29:  # Unconditional jumps & calls (direct and indirect)
+                if sub_opcode == 0: # JMP imm16 (same as a taken JCC imm16)
+                    if microstep == 1: # load high byte into marh (and pc++ automatically)
+                        control_word |= (1 << nIRD_OE) | (1 << nMARH_LD)
+                    elif microstep == 2: # read second word and store in instruction register
+                        control_word |= (1 << MEM_RD) | (1 << nIR_LD)
+                    elif microstep == 3: # load low byte into marl
+                        control_word |= (1 << nIRD_OE) | (1 << nMARL_LD)
+                    elif microstep == 4: # load destination from MAR into PC
+                        control_word |= (1 << PC_OE) | (1 << nPC_LD) | (1 << nMAR_OE) | (1 << nMPC_RST)
+                elif sub_opcode == 1: # CALL imm16
+                    if microstep == 1: # load high byte into marh (and pc++ automatically)
+                        control_word |= (1 << nIRD_OE) | (1 << nMARH_LD)
+                    elif microstep == 2: # read second word and store in instruction register
+                        control_word |= (1 << MEM_RD) | (1 << nIR_LD)
+                    elif microstep == 3: # load low byte into marl and pc++ (pc is now the return address)
+                        control_word |= (1 << nIRD_OE) | (1 << nMARL_LD) | (1 << PC_INC)
+                    elif microstep == 4: # push PCH
+                        control_word |= (1 << PC_OE) | (1 << nPCH_OE) | (1 << nSP_OE) | (1 << nSP_INC) | (1 << SP_DIR) | (1 << MEM_WR)
+                    elif microstep == 5: # push PCL
+                        control_word |= (1 << PC_OE) | (1 << nPCL_OE) | (1 << nSP_OE) | (1 << nSP_INC) | (1 << SP_DIR) | (1 << MEM_WR)
+                    elif microstep == 6: # load destination from MAR into PC
+                        control_word |= (1 << PC_OE) | (1 << nPC_LD) | (1 << nMAR_OE) | (1 << nMPC_RST)
+                elif sub_opcode == 2: # JMP MAR
                     if microstep == 1:
-                        control_word |= (1 << nIRD_OE) | (1 << REG_LD) | (1 << nMPC_RST)
-
-                elif base_opcode == 1:  # MOV REG, REG
+                        control_word |= (1 << PC_OE) | (1 << nPC_LD) | (1 << nMAR_OE) | (1 << nMPC_RST)
+                elif sub_opcode == 3: # JMP XY
                     if microstep == 1:
-                        control_word |= (1 << REG_OE) | (1 << REG_LD) | (1 << nMPC_RST)
+                        control_word |= (1 << PC_OE) | (1 << nPC_LD) | (1 << nXYA_OE) | (1 << nMPC_RST)
+                elif sub_opcode == 4: # CALL MAR
+                    # microstep 1 only does the pc++, so the pushed PC is the return address
+                    if microstep == 2: # push PCH
+                        control_word |= (1 << PC_OE) | (1 << nPCH_OE) | (1 << nSP_OE) | (1 << nSP_INC) | (1 << SP_DIR) | (1 << MEM_WR)
+                    elif microstep == 3: # push PCL
+                        control_word |= (1 << PC_OE) | (1 << nPCL_OE) | (1 << nSP_OE) | (1 << nSP_INC) | (1 << SP_DIR) | (1 << MEM_WR)
+                    elif microstep == 4:
+                        control_word |= (1 << PC_OE) | (1 << nPC_LD) | (1 << nMAR_OE) | (1 << nMPC_RST)
+                elif sub_opcode == 5: # CALL XY
+                    # microstep 1 only does the pc++, so the pushed PC is the return address
+                    if microstep == 2: # push PCH
+                        control_word |= (1 << PC_OE) | (1 << nPCH_OE) | (1 << nSP_OE) | (1 << nSP_INC) | (1 << SP_DIR) | (1 << MEM_WR)
+                    elif microstep == 3: # push PCL
+                        control_word |= (1 << PC_OE) | (1 << nPCL_OE) | (1 << nSP_OE) | (1 << nSP_INC) | (1 << SP_DIR) | (1 << MEM_WR)
+                    elif microstep == 4:
+                        control_word |= (1 << PC_OE) | (1 << nPC_LD) | (1 << nXYA_OE) | (1 << nMPC_RST)
 
-                elif base_opcode == 2:
-                    if sub_opcode == 0: # MOV MARL, Imm
-                        if microstep == 1:
-                            control_word |= (1 << nIRD_OE) | (1 << nMARL_LD) | (1 << nMPC_RST)
-                    elif sub_opcode == 1: # MOV MARH, Imm
-                        if microstep == 1:
-                            control_word |= (1 << nIRD_OE) | (1 << nMARH_LD) | (1 << nMPC_RST)
-                    elif sub_opcode == 2: # INC MAR
-                        if microstep == 1:
-                            control_word |= (1 << nMAR_INC) | (1 << nMPC_RST)
-                    elif sub_opcode == 3: # DEC MAR
-                        if microstep == 1:
-                            control_word |= (1 << nMAR_INC) | (1 << MAR_DIR) | (1 << nMPC_RST)
-                    elif sub_opcode == 4: # INC XY
-                        if microstep == 1:
-                            control_word |= (1 << nXY_INC) | (1 << nMPC_RST)
-                    elif sub_opcode == 5: # DEC XY
-                        if microstep == 1:
-                            control_word |= (1 << nXY_INC) | (1 << XY_DIR) | (1 << nMPC_RST)
-
-                elif base_opcode == 3:
-                    if sub_opcode == 0: # MOV MARL, REG
-                        if microstep == 1:
-                            control_word |= (1 << REG_OE) | (1 << nMARL_LD) | (1 << nMPC_RST)
-                    elif sub_opcode == 1: # MOV MARH, REG
-                        if microstep == 1:
-                            control_word |= (1 << REG_OE) | (1 << nMARH_LD) | (1 << nMPC_RST)
-
-                elif base_opcode == 4:  # LD reg, Imm
+            elif base_opcode == 30: # Stack Pointer operations
+                if sub_opcode == 0: # MOV SP, MAR
                     if microstep == 1:
-                        control_word |= (1 << PC_OE) | (1 << nIRA_OE) | (1 << nHBA_OE) | (1 << MEM_RD) | (1 << REG_LD) | (1 << nMPC_RST)
-
-                elif base_opcode == 5:  # LD reg, MAR
+                        control_word |= (1 << PC_OE) | (1 << nMAR_OE) | (1 << nSP_LD) | (1 << nMPC_RST)
+                elif sub_opcode == 1: # MOV MAR, SP
                     if microstep == 1:
-                        control_word |= (1 << PC_OE) | (1 << nMAR_OE) | (1 << MEM_RD) | (1 << REG_LD) | (1 << nMPC_RST)
-
-                elif base_opcode == 6:  # LD reg, XY
+                        control_word |= (1 << nSPL_OE) | (1 << nMARL_LD)
+                    elif microstep == 2:
+                        control_word |= (1 << nSPH_OE) | (1 << nMARH_LD) | (1 << nMPC_RST)
+                elif sub_opcode == 2: # MOV SP, XY
                     if microstep == 1:
-                        control_word |= (1 << PC_OE) | (1 << nXYA_OE) | (1 << MEM_RD) | (1 << REG_LD) | (1 << nMPC_RST)
-
-                elif base_opcode == 7:  # ST zp(imm8), A
-                    if microstep == 1: # bits [7:5] are part of the address, so the accumulator is enabled directly
-                        control_word |= (1 << PC_OE) | (1 << nIRA_OE) | (1 << nHBA_OE) | (1 << MEM_WR) | (1 << nACC_OE) | (1 << nMPC_RST)
-
-                elif base_opcode == 8:  # ST MAR, reg
+                        control_word |= (1 << PC_OE) | (1 << nXYA_OE) | (1 << nSP_LD) | (1 << nMPC_RST)
+                elif sub_opcode == 3: # INC SP
                     if microstep == 1:
-                        control_word |= (1 << PC_OE) | (1 << nMAR_OE) | (1 << MEM_WR) | (1 << REG_OE) | (1 << nMPC_RST)
-
-                elif base_opcode == 9:  # ST XY, reg
+                        control_word |= (1 << nSP_INC) | (1 << nMPC_RST)
+                elif sub_opcode == 4: # DEC SP
                     if microstep == 1:
-                        control_word |= (1 << PC_OE) | (1 << nXYA_OE) | (1 << MEM_WR) | (1 << REG_OE) | (1 << nMPC_RST)
-
-                elif base_opcode == 10: # PUSH reg
+                        control_word |= (1 << nSP_INC) | (1 << SP_DIR) | (1 << nMPC_RST)
+                elif sub_opcode == 6: # MOV X, SPH
                     if microstep == 1:
-                        control_word |= (1 << PC_OE) | (1 << REG_OE) | (1 << nSP_OE) | (1 << nSP_INC) | (1 << SP_DIR) | (1 << MEM_WR) | (1 << nMPC_RST)
+                        control_word |= (1 << nSPH_OE) | (1 << REG_LD) | (1 << nMPC_RST)
+                elif sub_opcode == 7: # MOV Y, SPL
+                    if microstep == 1:
+                        control_word |= (1 << nSPL_OE) | (1 << REG_LD) | (1 << nMPC_RST)
 
-                elif base_opcode == 11: # POP reg
+            elif base_opcode == 31: # Returns, flags and halt
+                if sub_opcode == 1: # RET
                     if microstep == 1:
                         control_word |= (1 << PC_OE) | (1 << nSP_OE) | (1 << nSP_INC)
                     elif microstep == 2:
-                        control_word |= (1 << PC_OE) | (1 << REG_LD) | (1 << nSP_OE) | (1 << MEM_RD) | (1 << nMPC_RST)
-
-                elif base_opcode == 12:  # ADD A, reg
-                    if microstep == 1:
-                        control_word |= (1 << ALU_S0) | (1 << ALU_S1) | (1 << REG_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFL_LD) | (1 << nMPC_RST)
-
-                elif base_opcode == 13:  # ADD A, imm8
-                    if microstep == 1:
-                        control_word |= (1 << ALU_S0) | (1 << ALU_S1) | (1 << nIRD_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFL_LD) | (1 << nMPC_RST)
-
-                elif base_opcode == 14:  # ADC A, reg
-                    if microstep == 1:
-                        control_word |= (1 << ALU_S0) | (1 << ALU_S1) | (1 << REG_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFL_LD) | (1 << nMPC_RST)
-                        if c_flag:
-                            control_word |= (1 << ALU_CIN)
-
-                elif base_opcode == 15:  # SUB A, reg
-                    if microstep == 1:
-                        control_word |= (1 << ALU_S1) | (1 << ALU_CIN) | (1 << REG_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFL_LD) | (1 << nMPC_RST)
-
-                elif base_opcode == 16:  # SBC A, reg
-                    if microstep == 1:
-                        control_word |= (1 << ALU_S1) | (1 << REG_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFL_LD) | (1 << nMPC_RST)
-                        if c_flag:
-                            control_word |= (1 << ALU_CIN)
-
-                elif base_opcode == 17:  # AND A, reg
-                    if microstep == 1:
-                        control_word |= (1 << ALU_S1) | (1 << ALU_S2) | (1 << REG_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFL_LD) | (1 << nMPC_RST)
-
-                elif base_opcode == 18:  # AND A, imm8
-                    if microstep == 1:
-                        control_word |= (1 << ALU_S1) | (1 << ALU_S2) | (1 << nIRD_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFL_LD) | (1 << nMPC_RST)
-
-                elif base_opcode == 19:  # OR A, reg
-                    if microstep == 1:
-                        control_word |= (1 << ALU_S0) | (1 << ALU_S2) | (1 << REG_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFL_LD) | (1 << nMPC_RST)
-
-                elif base_opcode == 20:  # XOR A, reg
-                    if microstep == 1:
-                        control_word |= (1 << ALU_S2) | (1 << REG_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFL_LD) | (1 << nMPC_RST)
-
-                elif base_opcode == 21:  # INC A
-                    if microstep == 1:
-                        control_word |= (1 << ALU_S0) | (1 << ALU_S1) | (1 << ALU_CIN) | (1 << nIRD_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFL_LD) | (1 << nMPC_RST)
-
-                elif base_opcode == 22:  # DEC A
-                    if microstep == 1:
-                        control_word |= (1 << ALU_S1) | (1 << nIRD_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFL_LD) | (1 << nMPC_RST)
-
-                elif base_opcode == 23:  # SHR A
-                    if microstep == 1:
-                        control_word |= (1 << nSHR_OE) | (1 << REG_LD) | (1 << nMPC_RST)
-
-                elif base_opcode == 24:  # ROR A
-                    if microstep == 1:
-                        control_word |= (1 << nSHR_OE) | (1 << REG_LD) | (1 << nMPC_RST)
-
-                elif base_opcode == 25:  # CP A, reg
-                    if microstep == 1:
-                        control_word |= (1 << ALU_S1) | (1 << ALU_CIN) | (1 << REG_OE) | (1 << nFL_LD) | (1 << nMPC_RST)
-
-                elif base_opcode == 26:  # CP A, imm
-                    if microstep == 1:
-                        control_word |= (1 << ALU_S1) | (1 << ALU_CIN) | (1 << nIRD_OE) | (1 << nFL_LD) | (1 << nMPC_RST)
-
-                elif base_opcode == 27:  # JCC imm16
-                    take_jump = check_condition(sub_opcode, z_flag, c_flag, n_flag, v_flag)
-
-                    if microstep == 1:
-                        if take_jump: # load high byte into marh (and pc++ automatically)
-                            control_word |= (1 << nIRD_OE) | (1 << nMARH_LD)
-                        else: # Branch not taken: Skip Low Byte
-                            pass
-
-                    elif microstep == 2:
-                        if take_jump: # Read second word and store in Instruction Register
-                            control_word |= (1 << MEM_RD) | (1 << nIR_LD)
-                        else: # Branch not taken: Skip High Byte and finish instruction (3 cycles total)
-                             control_word |= (1 << PC_INC) | (1 << nMPC_RST)
-
-                    elif microstep == 3: # Load low byte into MARL and pc++
-                            control_word |= (1 << nIRD_OE) | (1 << nMARL_LD) | (1 << PC_INC)
-
-                    elif microstep == 4: # Load destination from MAR into PC
+                        control_word |= (1 << PC_OE) | (1 << nMARL_LD) | (1 << nSP_OE) | (1 << nSP_INC) | (1 << MEM_RD)
+                    elif microstep == 3:
+                        control_word |= (1 << PC_OE) | (1 << nMARH_LD) | (1 << nSP_OE) | (1 << MEM_RD)
+                    elif microstep == 4:
                         control_word |= (1 << PC_OE) | (1 << nPC_LD) | (1 << nMAR_OE) | (1 << nMPC_RST)
 
-                elif base_opcode == 28:  # JCC XY
+                elif sub_opcode == 5: # PUSHF
                     if microstep == 1:
-                        if take_jump:
-                            control_word |= (1 << PC_OE) | (1 << nPC_LD) | (1 << nXYA_OE)
+                        control_word |= (1 << PC_OE) | (1 << nFL_OE) | (1 << nSP_OE) | (1 << nSP_INC) | (1 << SP_DIR) | (1 << MEM_WR) | (1 << nMPC_RST)
+
+                elif sub_opcode == 6: # POPF
+                    if microstep == 1:
+                        control_word |= (1 << PC_OE) | (1 << nSP_OE) | (1 << nSP_INC)
+                    elif microstep == 2:
+                        control_word |= (1 << PC_OE) | (1 << nFL_LD) | (1 << nSP_OE) | (1 << MEM_RD) | (1 << nMPC_RST)
+
+                elif sub_opcode == 7: # HALT
+                    if microstep == 1:
                         control_word |= (1 << nMPC_RST)
-
-                elif base_opcode == 29:  # Unconditional jumps & calls (direct and indirect)
-                    if sub_opcode == 0: # JMP imm16 (same as a taken JCC imm16)
-                        if microstep == 1: # load high byte into marh (and pc++ automatically)
-                            control_word |= (1 << nIRD_OE) | (1 << nMARH_LD)
-                        elif microstep == 2: # read second word and store in instruction register
-                            control_word |= (1 << MEM_RD) | (1 << nIR_LD)
-                        elif microstep == 3: # load low byte into marl
-                            control_word |= (1 << nIRD_OE) | (1 << nMARL_LD)
-                        elif microstep == 4: # load destination from MAR into PC
-                            control_word |= (1 << PC_OE) | (1 << nPC_LD) | (1 << nMAR_OE) | (1 << nMPC_RST)
-                    elif sub_opcode == 1: # CALL imm16
-                        if microstep == 1: # load high byte into marh (and pc++ automatically)
-                            control_word |= (1 << nIRD_OE) | (1 << nMARH_LD)
-                        elif microstep == 2: # read second word and store in instruction register
-                            control_word |= (1 << MEM_RD) | (1 << nIR_LD)
-                        elif microstep == 3: # load low byte into marl and pc++ (pc is now the return address)
-                            control_word |= (1 << nIRD_OE) | (1 << nMARL_LD) | (1 << PC_INC)
-                        elif microstep == 4: # push PCH
-                            control_word |= (1 << PC_OE) | (1 << nPCH_OE) | (1 << nSP_OE) | (1 << nSP_INC) | (1 << SP_DIR) | (1 << MEM_WR)
-                        elif microstep == 5: # push PCL
-                            control_word |= (1 << PC_OE) | (1 << nPCL_OE) | (1 << nSP_OE) | (1 << nSP_INC) | (1 << SP_DIR) | (1 << MEM_WR)
-                        elif microstep == 6: # load destination from MAR into PC
-                            control_word |= (1 << PC_OE) | (1 << nPC_LD) | (1 << nMAR_OE) | (1 << nMPC_RST)
-                    elif sub_opcode == 2: # JMP MAR
-                        if microstep == 1:
-                            control_word |= (1 << PC_OE) | (1 << nPC_LD) | (1 << nMAR_OE) | (1 << nMPC_RST)
-                    elif sub_opcode == 3: # JMP XY
-                        if microstep == 1:
-                            control_word |= (1 << PC_OE) | (1 << nPC_LD) | (1 << nXYA_OE) | (1 << nMPC_RST)
-                    elif sub_opcode == 4: # CALL MAR
-                        # microstep 1 only does the pc++, so the pushed PC is the return address
-                        if microstep == 2: # push PCH
-                            control_word |= (1 << PC_OE) | (1 << nPCH_OE) | (1 << nSP_OE) | (1 << nSP_INC) | (1 << SP_DIR) | (1 << MEM_WR)
-                        elif microstep == 3: # push PCL
-                            control_word |= (1 << PC_OE) | (1 << nPCL_OE) | (1 << nSP_OE) | (1 << nSP_INC) | (1 << SP_DIR) | (1 << MEM_WR)
-                        elif microstep == 4:
-                            control_word |= (1 << PC_OE) | (1 << nPC_LD) | (1 << nMAR_OE) | (1 << nMPC_RST)
-                    elif sub_opcode == 5: # CALL XY
-                        # microstep 1 only does the pc++, so the pushed PC is the return address
-                        if microstep == 2: # push PCH
-                            control_word |= (1 << PC_OE) | (1 << nPCH_OE) | (1 << nSP_OE) | (1 << nSP_INC) | (1 << SP_DIR) | (1 << MEM_WR)
-                        elif microstep == 3: # push PCL
-                            control_word |= (1 << PC_OE) | (1 << nPCL_OE) | (1 << nSP_OE) | (1 << nSP_INC) | (1 << SP_DIR) | (1 << MEM_WR)
-                        elif microstep == 4:
-                            control_word |= (1 << PC_OE) | (1 << nPC_LD) | (1 << nXYA_OE) | (1 << nMPC_RST)
-
-                elif base_opcode == 30: # Stack Pointer operations
-                    if sub_opcode == 0: # MOV SP, MAR
-                        if microstep == 1:
-                            control_word |= (1 << PC_OE) | (1 << nMAR_OE) | (1 << nSP_LD) | (1 << nMPC_RST)
-                    elif sub_opcode == 1: # MOV MAR, SP
-                        if microstep == 1:
-                            control_word |= (1 << nSPL_OE) | (1 << nMARL_LD)
-                        elif microstep == 2:
-                            control_word |= (1 << nSPH_OE) | (1 << nMARH_LD) | (1 << nMPC_RST)
-                    elif sub_opcode == 2: # MOV SP, XY
-                        if microstep == 1:
-                            control_word |= (1 << PC_OE) | (1 << nXYA_OE) | (1 << nSP_LD) | (1 << nMPC_RST)
-                    elif sub_opcode == 3: # INC SP
-                        if microstep == 1:
-                            control_word |= (1 << nSP_INC) | (1 << nMPC_RST)
-                    elif sub_opcode == 4: # DEC SP
-                        if microstep == 1:
-                            control_word |= (1 << nSP_INC) | (1 << SP_DIR) | (1 << nMPC_RST)
-                    elif sub_opcode == 6: # MOV X, SPH
-                        if microstep == 1:
-                            control_word |= (1 << nSPH_OE) | (1 << REG_LD) | (1 << nMPC_RST)
-                    elif sub_opcode == 7: # MOV Y, SPL
-                        if microstep == 1:
-                            control_word |= (1 << nSPL_OE) | (1 << REG_LD) | (1 << nMPC_RST)
-
-                elif base_opcode == 31: # System, interrupts and returns
-                    if sub_opcode == 0:   # BRK (software interrupt)
-                        if microstep == 1: # Push PCH
-                            control_word |= (1 << PC_OE) | (1 << nPCH_OE) | (1 << nSP_OE) | (1 << nSP_INC) | (1 << SP_DIR) | (1 << MEM_WR)
-                        elif microstep == 2: # Push PCL
-                            control_word |= (1 << PC_OE) | (1 << nPCL_OE) | (1 << nSP_OE) | (1 << nSP_INC) | (1 << SP_DIR) | (1 << MEM_WR)
-                        elif microstep == 3: # Push flags with B_SET active
-                            control_word |= (1 << PC_OE) | (1 << nFL_OE) | (1 << nSP_OE) | (1 << nSP_INC) | (1 << SP_DIR) | (1 << MEM_WR) | (1 << B_SET)
-                        elif microstep == 4: # Fetch vector low (0xFFFE)
-                            control_word |= (1 << PC_OE) | (1 << nV_OE) | (1 << MEM_RD) | (1 << nIR_LD)
-                        elif microstep == 5: # Save vector low in MARL
-                            control_word |= (1 << nIRD_OE) | (1 << nMARL_LD)
-                        elif microstep == 6: # Fetch vector high (0xFFFF)
-                            control_word |= (1 << PC_OE) | (1 << nV_OE) | (1 << V_B0) | (1 << MEM_RD) | (1 << nIR_LD)
-                        elif microstep == 7: # Save vector high in MARH
-                            control_word |= (1 << nIRD_OE) | (1 << nMARH_LD)
-                        elif microstep == 8: # Jump to vector in MAR & reset counter
-                            control_word |= (1 << PC_OE) | (1 << nPC_LD) | (1 << nMAR_OE) | (1 << I_SET) | (1 << I_WRITE) | (1 << nMPC_RST)
-
-                    elif sub_opcode == 1: # RET
-                        if microstep == 1:
-                            control_word |= (1 << PC_OE) | (1 << nSP_OE) | (1 << nSP_INC)
-                        elif microstep == 2:
-                            control_word |= (1 << PC_OE) | (1 << nMARL_LD) | (1 << nSP_OE) | (1 << nSP_INC) | (1 << MEM_RD)
-                        elif microstep == 3:
-                            control_word |= (1 << PC_OE) | (1 << nMARH_LD) | (1 << nSP_OE) | (1 << MEM_RD)
-                        elif microstep == 4:
-                            control_word |= (1 << PC_OE) | (1 << nPC_LD) | (1 << nMAR_OE) | (1 << nMPC_RST)
-
-                    elif sub_opcode == 2: # RTI
-                        if microstep == 1:
-                            control_word |= (1 << PC_OE) | (1 << nSP_OE) | (1 << nSP_INC)
-                        elif microstep == 2:
-                            control_word |= (1 << PC_OE) | (1 << nFL_LD) | (1 << nSP_OE) | (1 << nSP_INC) | (1 << MEM_RD) | (1 << I_WRITE) | (1 << FL_SEL)
-                        elif microstep == 3:
-                            control_word |= (1 << PC_OE) | (1 << nMARL_LD) | (1 << nSP_OE) | (1 << nSP_INC) | (1 << MEM_RD)
-                        elif microstep == 4:
-                            control_word |= (1 << PC_OE) | (1 << nMARH_LD) | (1 << nSP_OE) | (1 << MEM_RD)
-                        elif microstep == 5:
-                            control_word |= (1 << PC_OE) | (1 << nPC_LD) | (1 << nMAR_OE) | (1 << nMPC_RST)
-
-                    elif sub_opcode == 3: # SEI
-                        if microstep == 1:
-                            control_word |= (1 << I_SET) | (1 << I_WRITE) | (1 << nMPC_RST)
-
-                    elif sub_opcode == 4: # CLI
-                        if microstep == 1:
-                            control_word |= (1 << I_WRITE) | (1 << nMPC_RST)
-
-                    elif sub_opcode == 5: # PUSHF
-                        if microstep == 1:
-                            control_word |= (1 << PC_OE) | (1 << nFL_OE) | (1 << nSP_OE) | (1 << nSP_INC) | (1 << SP_DIR) | (1 << MEM_WR) | (1 << nMPC_RST)
-
-                    elif sub_opcode == 6: # POPF
-                        if microstep == 1:
-                            control_word |= (1 << PC_OE) | (1 << nSP_OE) | (1 << nSP_INC)
-                        elif microstep == 2:
-                            control_word |= (1 << PC_OE) | (1 << nFL_LD) | (1 << nSP_OE) | (1 << MEM_RD) | (1 << nMPC_RST)
-
-                    elif sub_opcode == 7: # HALT
-                        if microstep == 1:
-                            control_word |= (1 << nMPC_RST)
 
         f_control_word = control_word ^ active_low_mask
 
