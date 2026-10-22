@@ -395,7 +395,7 @@
       <pos x="340" y="60"/>
     </visualElement>
     <visualElement>
-      <elementName>FLAG_REG.dig</elementName>
+      <elementName>STATUS_REG.dig</elementName>
       <elementAttributes/>
       <pos x="1040" y="300"/>
     </visualElement>

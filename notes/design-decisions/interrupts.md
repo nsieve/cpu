@@ -14,7 +14,7 @@ The interrupt module (`INTERRUPTS.dig`) is where the requests come in. The three
 
 <img src="../Attachments/int_dig.png" alt="Interrupt Module" width="412" />
 
-The I flag lives in the flag register (`FLAG_REG.dig`), in its own 7474, separate from the ALU flags, and it's written with `I_SET` and `I_WRITE`. There is also `B_SET`, which forces the B (break) flag to 1 when the flags are pushed by a `BRK`, so a routine can tell a software interrupt from a hardware one.
+The I flag lives in the status register (`STATUS_REG.dig`), in its own 7474, separate from the ALU flags, and it's written with `I_SET` and `I_WRITE`. There is also `B_SET`, which forces the B (break) flag to 1 when the flags are pushed by a `BRK`, so a routine can tell a software interrupt from a hardware one.
 
 <img src="../Attachments/flagreg_dig.png" alt="Flag Register" width="364" />
 

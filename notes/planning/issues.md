@@ -24,7 +24,7 @@ Things that should exist but don't yet.
 | ---- | ----- |
 | Test cases | There are no Digital test cases, and the only test program (`main.asm`) checks jumps. Most instructions have never been tested on purpose. |
 | HALT hardware | See the bug above. |
-| Generic gates mapped to real chips | `CPU.dig`, `MAR.dig`, `SP.dig`, `ALU.dig`, `FLAG_REG.dig`, `MMIO.dig` and `INTERRUPTS.dig` still use generic And/Or/Not gates instead of 74HC parts. |
+| Generic gates mapped to real chips | `CPU.dig`, `MAR.dig`, `SP.dig`, `ALU.dig`, `STATUS_REG.dig`, `MMIO.dig` and `INTERRUPTS.dig` still use generic And/Or/Not gates instead of 74HC parts. |
 | Docs for some modules | `controlunit.md`, `addrhighbuffer.md` and `controlbits.md` are empty, and `instregister.md` only has a title. |
 
 ## Limitations (by Design)

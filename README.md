@@ -66,8 +66,6 @@ The main modules are:
 | Micro-Program Counter                                          | 4-bit microstep counter                                   |  To do  |
 | MMIO                                                           | Memory-mapped I/O registers                               |  To do  |
 
-(the doc is called Status Register but the circuit is FLAG_REG.dig, and there's also a STATUS_REG.dig. Which name should stay?)
-
 Instruction set:
 
 - [Instruction Set Architecture](notes/opcodes%26microinstructions/isa.md): every instruction, its opcode, cycles and flags
@@ -122,8 +120,7 @@ The whole datapath works in the simulation, and every instruction has its microc
 - [ ] Document every module
 - [ ] Map the remaining generic gates to real chips
 - [ ] Build it on breadboards (started)
-
-(add anything I'm missing, for example the address decoder bug or what's planned for the clock, reset and HALT in the sim)
+- [ ] Make the whole design in VHDL
 
 ## Use of AI
 
