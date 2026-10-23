@@ -1,5 +1,6 @@
 import sys
 import os
+import re
 
 # ==============================================================================
 # HARDWARE DEFINITIONS & MAPS
@@ -23,6 +24,7 @@ DIRECTIVES_ORG  = [".ORG", "ORG"]
 DIRECTIVES_WORD = [".DW", "DW", ".WORD", "WORD", ".VEC", "VEC", ".VECTOR", "VECTOR"]
 DIRECTIVES_BYTE = [".DB", "DB", ".BYTE", "BYTE"]
 DIRECTIVES_RAW  = [".RAW", "RAW"]   # one whole 16-bit word as-is (for hand-encoded instructions)
+DIRECTIVES_EQU  = [".EQU", "EQU"]   # .EQU NAME value: a constant, usable anywhere a number is
 
 # ==============================================================================
 # TOKENIZER & PARSER HELPERS
@@ -228,6 +230,35 @@ def encode_instruction(mnemonic, tokens, symbol_table):
     raise SyntaxError(f"Unknown instruction or invalid format: {mnemonic} {' '.join(tokens)}")
 
 # ==============================================================================
+# INCLUDES
+# ==============================================================================
+
+INCLUDE_RE = re.compile(r'^\s*\.?INCLUDE\s+"?([^";]+?)"?\s*(;.*)?$', re.IGNORECASE)
+
+def expand_includes(filepath, seen=None):
+    # replaces every '.INCLUDE "file"' line with the contents of that file
+    # (paths are relative to the file that includes them)
+    seen = set() if seen is None else seen
+    filepath = os.path.abspath(filepath)
+    if filepath in seen:
+        raise RecursionError(f"'{filepath}' includes itself")
+    seen.add(filepath)
+
+    with open(filepath, 'r') as f:
+        lines = f.read().splitlines()
+
+    out = []
+    for line in lines:
+        m = INCLUDE_RE.match(line)
+        if m:
+            inc = os.path.join(os.path.dirname(filepath), m.group(1).strip())
+            out.append(expand_includes(inc, seen))
+        else:
+            out.append(line)
+    seen.discard(filepath)
+    return "\n".join(out)
+
+# ==============================================================================
 # TWO-PASS ASSEMBLER ENGINE
 # ==============================================================================
 
@@ -258,6 +289,16 @@ def assemble(source_code, default_origin=0xC000):
             
                 if mnemonic in DIRECTIVES_ORG:
                     current_address = parse_val(tokens[1], symbol_table)
+                    continue
+
+                if mnemonic in DIRECTIVES_EQU:
+                    if len(tokens) != 3:
+                        raise SyntaxError("Expected .EQU NAME value")
+                    name = tokens[1]
+                    if name in symbol_table:
+                        raise NameError(f"Duplicate symbol '{name}'")
+                    # the value must be a number or an already defined symbol
+                    symbol_table[name] = parse_val(tokens[2], symbol_table)
                     continue
             
                 if mnemonic in DIRECTIVES_WORD:
@@ -371,10 +412,9 @@ if __name__ == "__main__":
     asm_filepath = sys.argv[1]
     
     try:
-        with open(asm_filepath, 'r') as f:
-            asm_code = f.read()
-    except FileNotFoundError:
-        print(f"Error: File '{asm_filepath}' not found.")
+        asm_code = expand_includes(asm_filepath)
+    except FileNotFoundError as e:
+        print(f"Error: File '{e.filename}' not found.")
         sys.exit(1)
 
     try:

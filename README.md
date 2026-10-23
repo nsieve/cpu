@@ -98,7 +98,10 @@ programs/
   assembler.py            assembler for SFD-8 programs
   crom_programmer.py      generates the microcode for the control unit EPROMs
   gen_docs.py             generates the control bits and microcode docs from crom_programmer.py
-  main.asm                current test program
+  main.asm                self-checking test (jumps, ST zp, free slots)
+  max7219_test.asm        shows 12345 and 54321 on the 7-segment display
+  fibonacci.asm           16-bit Fibonacci on the 7-segment display
+  lib/max7219.asm         MAX7219 driver: SPI, init and decimal numbers (SHOW_DEC)
 ```
 
 ## Running It
