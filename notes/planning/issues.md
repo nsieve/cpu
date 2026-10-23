@@ -9,7 +9,6 @@ Things that exist but don't work as intended.
 | Issue | Where | Notes |
 | ----- | ----- | ----- |
 | `ROR` does the same as `SHR` | microcode | `SHR_IN0` is never set, and the bit shifted out doesn't go into C. |
-| `HALT` behaves like a `NOP` | microcode + hardware | It only resets the micro-PC, and step 1 still does `PC_INC`. It needs hardware that actually stops the clock. |
 | `POPF` loads the flags from the ALU | microcode | Step 2 doesn't set `FL_SEL`. |
 | `AND`/`OR`/`XOR` load garbage into C and V | hardware | The 4 ALU flags are loaded together, so C and V get whatever the 74382 outputs on a logic operation. Only Z and N are meaningful. |
 | MMIO and framebuffer decoding don't work as intended | `ADDR_DEC.dig` | From the old to-do list, check if it's still true. |
@@ -22,9 +21,8 @@ Things that should exist but don't yet.
 | What | Notes |
 | ---- | ----- |
 | Test cases | There are no Digital test cases, and the only test program (`main.asm`) checks jumps, `ST zp` and the free slots. Most instructions have never been tested on purpose. |
-| HALT hardware | See the bug above. |
 | Generic gates mapped to real chips | `CPU.dig`, `MAR.dig`, `SP.dig` and `MMIO.dig` still use 8 generic And/Or/Not gates instead of 74HC parts. |
-| Docs for some modules | `controlunit.md` and `addrhighbuffer.md` are empty, and `instregister.md` only has a title. |
+| Docs for some modules | `addrhighbuffer.md` is empty, and `instregister.md` only has a title. |
 
 ## Limitations (by Design)
 

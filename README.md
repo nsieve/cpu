@@ -13,7 +13,7 @@ An 8-bit CPU designed from scratch and built entirely from 74HC logic chips.
 - 8-bit data bus, 16-bit address bus (64 KB of memory)
 - Von Neumann, accumulator-based architecture
 - 32 opcodes that expand to 66 instructions using sub-opcodes
-- Microprogrammed control unit: 40 control bits on three 16-bit EPROMs, up to 16 microsteps per instruction
+- Microprogrammed control unit: 41 control bits on three 16-bit EPROMs, up to 16 microsteps per instruction
 - Most instructions take 2 cycles, because the fetch of the next instruction overlaps with the execution of the current one
 - 48 KB of RAM, 15 KB of ROM, a 1 KB framebuffer and 256 bytes of memory-mapped I/O
 - I/O: keyboard, timer and an SPI port for an OLED display
@@ -61,16 +61,15 @@ The main modules are:
 | [Address Decoder](notes/hardware-design/address_decoder.md)    | Chip selects for each memory region                       | Partial |
 | [Reset Buffer](notes/hardware-design/rstbuffer.md)             | Reset vector logic                                        | Partial |
 | [Instruction Register](notes/hardware-design/instregister.md)  | 16-bit IR                                                 |  To do  |
-| [Control Unit](notes/hardware-design/controlunit.md)           | Microcode EPROMs                                          |  To do  |
+| [Control Unit](notes/hardware-design/controlunit.md)           | Microcode EPROMs and the micro-PC                         |  Done   |
 | [Address High Buffer](notes/hardware-design/addrhighbuffer.md) | Forces the high byte of the address to `0x00` (zero page) |  To do  |
-| Micro-Program Counter                                          | 4-bit microstep counter                                   |  To do  |
 | MMIO                                                           | Memory-mapped I/O registers                               |  To do  |
 
 Instruction set:
 
 - [Instruction Set Architecture](notes/opcodes%26microinstructions/isa.md): every instruction, its opcode, cycles and flags
 - [Instruction Decoding](notes/opcodes%26microinstructions/instructiondecoding.md): how the 16-bit instruction word is split
-- [Control Bits](notes/opcodes%26microinstructions/controlbits.md): what each of the 40 control bits does (generated)
+- [Control Bits](notes/opcodes%26microinstructions/controlbits.md): what each of the 41 control bits does (generated)
 - [Instruction Set (Extended)](notes/opcodes%26microinstructions/instructionset_extended.md): the control bits of every instruction in every microstep (generated)
 - [Memory Map](notes/hardware-design/memory_map.md)
 

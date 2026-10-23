@@ -1,8 +1,8 @@
 ; ==============================================================================
 ; Test Program: jumps, ST zp with every register & free opcode slots
 ; ==============================================================================
-; If everything works, the CPU ends up looping on PASS.
-; If something fails, it loops on FAIL, and X holds the number of the check
+; If everything works, the CPU halts on PASS.
+; If something fails, it halts on FAIL, and X holds the number of the check
 ; that failed:
 ;   1-2   conditional jumps
 ;   3-10  ST zp of A, B, C, D, E, F, X, Y
@@ -113,7 +113,9 @@ JUMPS_OK:
     JNZ FAIL
 
 PASS:
-    JMP PASS
+    HALT
+    JMP PASS            ; only reached if HALT doesn't stop the cpu
 
 FAIL:
+    HALT
     JMP FAIL

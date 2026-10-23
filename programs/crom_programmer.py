@@ -45,7 +45,8 @@ nSP_OE   = 36   # output SP to the address bus
 nSPL_OE  = 37   # output SPL to the data bus
 nSPH_OE  = 38   # output SPH to the data bus
 SRC_SEL  = 39   # source decoder input. 0 = IR[7:5], 1 = IR[10:8] (for ST zp, reg)
-# 40-47 unused
+nHALT    = 40   # stops the micro-pc from counting (ENP/ENT of the 74163), so the cpu freezes in the current step
+# 41-47 unused
 
 
 active_low_mask = (
@@ -56,7 +57,7 @@ active_low_mask = (
     (1 << nXYA_OE)  | (1 << nALU_OE)  | (1 << nSHR_OE)   |
     (1 << nFL_OE)   | (1 << nFL_LD)   | (1 << nSP_INC)   |
     (1 << nSP_LD)   | (1 << nSP_OE)   | (1 << nSPL_OE)   |
-    (1 << nSPH_OE)  | (1 << nMAR_INC)
+    (1 << nSPH_OE)  | (1 << nMAR_INC) | (1 << nHALT)
 )
 
 
@@ -370,8 +371,9 @@ def gen_microcode():
                         control_word |= (1 << PC_OE) | (1 << nFL_LD) | (1 << nSP_OE) | (1 << MEM_RD) | (1 << nMPC_RST)
 
                 elif sub_opcode == 7: # HALT
-                    if microstep == 1:
-                        control_word |= (1 << nMPC_RST)
+                    # step 1 only does the pc++ (so the pc points to the next instruction)
+                    if microstep == 2: # freeze the micro-pc here, with nothing else active (no nMPC_RST, CLR has priority over the enables)
+                        control_word |= (1 << nHALT)
 
         f_control_word = control_word ^ active_low_mask
 

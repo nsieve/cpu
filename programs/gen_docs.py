@@ -63,6 +63,11 @@ def control_word(eproms, base, sub, step, flags):
     return word ^ cp.active_low_mask   # 1 = the signal is active, whatever its level
 
 
+def ends(word):
+    # the instruction ends with nMPC_RST, or freezes there with nHALT (HALT)
+    return (word >> cp.nMPC_RST) & 1 or (word >> cp.nHALT) & 1
+
+
 def run_instruction(eproms, base, sub):
     # list of steps, each one a dict {flags: control word} with only the flag combos still running
     steps = []
@@ -72,14 +77,14 @@ def run_instruction(eproms, base, sub):
             break
         words = {f: control_word(eproms, base, sub, step, f) for f in running}
         steps.append(words)
-        running = {f for f in running if not (words[f] >> cp.nMPC_RST) & 1}
+        running = {f for f in running if not ends(words[f])}
     return steps
 
 
 def cycle_counts(steps):
     counts = set()
     for i, words in enumerate(steps):
-        counts |= {i + 1 for w in words.values() if (w >> cp.nMPC_RST) & 1}
+        counts |= {i + 1 for w in words.values() if ends(w)}
     return counts
 
 
@@ -113,7 +118,8 @@ def describe_step(words, bits):
 def step_table(steps, bits):
     rows = ["| Step | Control bits |", "| ---- | ------------ |"]
     for i, words in enumerate(steps):
-        rows.append(f"| {i} | {describe_step(words, bits)} |")
+        frozen = " (the micro-PC stays in this step)" if any((w >> cp.nHALT) & 1 for w in words.values()) else ""
+        rows.append(f"| {i} | {describe_step(words, bits)}{frozen} |")
     return rows
 
 
@@ -148,7 +154,7 @@ def write_controlbits(bits):
         "",
         GENERATED_NOTE,
         "",
-        "The control unit has 3 EPROMs with 16 outputs each, so 48 control bits, but only 40 are used. "
+        f"The control unit has 3 EPROMs with 16 outputs each, so 48 control bits, but only {len(bits)} are used. "
         "Bit 0 is output D0 of EPROM 1, bit 16 is D0 of EPROM 2, and bit 32 is D0 of EPROM 3.",
         "",
         "Bits that start with `n` are active-low. The programmer writes every bit inactive by default "

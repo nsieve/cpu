@@ -510,4 +510,5 @@ Step 0 is the fetch, and it's the same in every instruction. When a step depends
 | Step | Control bits |
 | ---- | ------------ |
 | 0 | `nIR_LD`, `MEM_RD` |
-| 1 | `PC_INC`, `nMPC_RST` |
+| 1 | `PC_INC` |
+| 2 | `nHALT` (the micro-PC stays in this step) |
