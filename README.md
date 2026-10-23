@@ -60,7 +60,7 @@ The main modules are:
 | [Register File](notes/hardware-design/regfile.md)              | Accumulator, 7 registers and the XY pair                  | Partial |
 | [Address Decoder](notes/hardware-design/address_decoder.md)    | Chip selects for each memory region                       | Partial |
 | [Reset Buffer](notes/hardware-design/rstbuffer.md)             | Reset vector logic                                        | Partial |
-| [Instruction Register](notes/hardware-design/instregister.md)  | 16-bit IR                                                 |  To do  |
+| [Instruction Register](notes/hardware-design/instregister.md)  | 16-bit IR                                                 |  Done   |
 | [Control Unit](notes/hardware-design/controlunit.md)           | Microcode EPROMs and the micro-PC                         |  Done   |
 | [Address High Buffer](notes/hardware-design/addrhighbuffer.md) | Forces the high byte of the address to `0x00` (zero page) |  To do  |
 | MMIO                                                           | Memory-mapped I/O registers                               |  To do  |

@@ -22,7 +22,7 @@ Things that should exist but don't yet.
 | ---- | ----- |
 | Test cases | There are no Digital test cases, and the only test program (`main.asm`) checks jumps, `ST zp` and the free slots. Most instructions have never been tested on purpose. |
 | Generic gates mapped to real chips | `CPU.dig`, `MAR.dig`, `SP.dig` and `MMIO.dig` still use 8 generic And/Or/Not gates instead of 74HC parts. |
-| Docs for some modules | `addrhighbuffer.md` is empty, and `instregister.md` only has a title. |
+| Docs for some modules | `addrhighbuffer.md` is empty. |
 
 ## Limitations (by Design)
 
