@@ -7,7 +7,7 @@ The Instruction Register (IR) holds the 16-bit instruction that is being execute
 The two bytes are used in different ways:
 
 - The upper byte `[15:8]` (the opcode) is always being output, because the Control Unit needs it in every step to know what to do.
-- The lower byte `[7:0]` (the immediate) can do three things: output nothing, output to the data bus (for immediates like `MOV REG, Imm`), or output to the lower byte of the address bus (for the zero-page instructions, together with the Address High Buffer, which forces the upper byte to `0x00`).
+- The lower byte `[7:0]` (the immediate) can do three things: output nothing, output to the data bus (for immediates like `MOV REG, Imm`), or output to the lower byte of the address bus (for the zero-page instructions, together with the Address High Buffer in `address_buffers.md`, which forces the upper byte to `0x00`).
 
 ## Hardware Architecture
 

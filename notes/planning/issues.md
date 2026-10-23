@@ -12,7 +12,6 @@ Things that exist but don't work as intended.
 | `POPF` loads the flags from the ALU | microcode | Step 2 doesn't set `FL_SEL`. |
 | `AND`/`OR`/`XOR` load garbage into C and V | hardware | The 4 ALU flags are loaded together, so C and V get whatever the 74382 outputs on a logic operation. Only Z and N are meaningful. |
 | MMIO and framebuffer decoding don't work as intended | `ADDR_DEC.dig` | From the old to-do list, check if it's still true. |
-| Reset needs a manual sequence | `RST Buffer.dig` | The reset address (`0xC000`) is hardwired into two 74245 that I have to open by hand after a reset. It should happen by itself. |
 
 ## Missing
 
@@ -22,7 +21,6 @@ Things that should exist but don't yet.
 | ---- | ----- |
 | Test cases | There are no Digital test cases, and the only test program (`main.asm`) checks jumps, `ST zp` and the free slots. Most instructions have never been tested on purpose. |
 | Generic gates mapped to real chips | `CPU.dig`, `MAR.dig`, `SP.dig` and `MMIO.dig` still use 8 generic And/Or/Not gates instead of 74HC parts. |
-| Docs for some modules | `addrhighbuffer.md` is empty. |
 
 ## Limitations (by Design)
 

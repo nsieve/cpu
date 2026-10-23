@@ -10,34 +10,19 @@ At reset, the PC loads the hardwired vector `0xC000`, which is the start of ROM
 ## Hardware Architecture & Data Path
 
 The PC is built from four 74161 4-bit synchronous binary counters cascaded into a single 16-bit counter. The output of the PC is driven either onto the address bus, for normal fetching operations, or the data bus, for loading the PC into the RAM.
-
-<img src="../Attachments/pc_dig.png" alt="Program Counter ICs" width="675" />
+![](notes/Attachments/Pasted%20image%2020261023235822.png)
+<img src="../Attachments/pc_dig.png" alt="Program Counter ICs" width="900" />
 
 ### Reset Circuit
 
-Initially the PC is outputting at address `0x0000`, meaning the address decoder is selecting the RAM. Since the ROM is not the one selected, it means the instruction register, and therefore the Control Unit's opcode is 0.
+During reset, the PC has to stop driving the address bus (the Reset Buffer drives `0xC000` on it) and load that address. Two gates force this, no matter what the control bits say:
 
-In order to latch the hardwired vector `0xC000` on the PC, the load signal must be able to save normally during software instructions, but also when a physical reset button is pressed.
+| PC input       | Logic                | During reset                        |
+| -------------- | -------------------- | ----------------------------------- |
+| `/LD` (74161)  | `nPC_LD` AND `nRST`  | always 0, so it loads on every edge |
+| `/OE` (74245s) | `PC_OE` OR `RST`     | always 1, so it's off the bus       |
 
-| Reset button | nPC_LD | Output (/LD) |
-| ------------ | ------ | ------------ |
-| 0            | 0      | 0            |
-| 0            | 1      | 1            |
-| 1            | 0      | 1            |
-| 1            | 1      | 0            |
-
-This fits the exact table truth of an XOR gate.
-
-It is also important to deactivate the output of the the program counter, which is normally outputting to the address bus, and coincidentally, it follows the exact same table truth of the load operation.
-
-| Reset button | PC_OE | Output (/OE) |
-| ------------ | ----- | ------------ |
-| 0            | 0     | 0            |
-| 0            | 1     | 1            |
-| 1            | 0     | 1            |
-| 1            | 1     | 0            |
-
-In this case, the `/OE` is the bit corresponding to the 74245 Tri-State buffer connecting the outputs of the PC to the address bus.
+At first these were XOR gates, which only worked if the microcode wasn't using `nPC_LD` or `PC_OE` at that moment. More about the whole reset in `reset.md`.
 
 ## Control Signals & Operations
 

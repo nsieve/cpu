@@ -59,10 +59,10 @@ The main modules are:
 | [ALU](notes/hardware-design/alu.md)                            | 8-bit ALU with two 74382                                  | Partial |
 | [Register File](notes/hardware-design/regfile.md)              | Accumulator, 7 registers and the XY pair                  | Partial |
 | [Address Decoder](notes/hardware-design/address_decoder.md)    | Chip selects for each memory region                       | Partial |
-| [Reset Buffer](notes/hardware-design/rstbuffer.md)             | Reset vector logic                                        | Partial |
+| [Reset](notes/hardware-design/reset.md)                        | Synchronized reset button, PC and Control Unit reset      |  Done   |
 | [Instruction Register](notes/hardware-design/instregister.md)  | 16-bit IR                                                 |  Done   |
 | [Control Unit](notes/hardware-design/controlunit.md)           | Microcode EPROMs and the micro-PC                         |  Done   |
-| [Address High Buffer](notes/hardware-design/addrhighbuffer.md) | Forces the high byte of the address to `0x00` (zero page) |  To do  |
+| [Address Buffers](notes/hardware-design/address_buffers.md)    | Hardwired `0x00` (zero page) and `0xC000` (reset vector)  |  Done   |
 | MMIO                                                           | Memory-mapped I/O registers                               |  To do  |
 
 Instruction set:

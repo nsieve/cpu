@@ -36,7 +36,7 @@
           <string>CLK</string>
         </entry>
       </elementAttributes>
-      <pos x="400" y="500"/>
+      <pos x="500" y="500"/>
     </visualElement>
     <visualElement>
       <elementName>VDD</elementName>
@@ -66,7 +66,7 @@
           <string>CLK</string>
         </entry>
       </elementAttributes>
-      <pos x="420" y="500"/>
+      <pos x="520" y="500"/>
     </visualElement>
     <visualElement>
       <elementName>Tunnel</elementName>
@@ -105,7 +105,7 @@
           <string>RST_IN</string>
         </entry>
       </elementAttributes>
-      <pos x="400" y="400"/>
+      <pos x="500" y="400"/>
     </visualElement>
     <visualElement>
       <elementName>Out</elementName>
@@ -132,7 +132,7 @@
       <p2 x="800" y="400"/>
     </wire>
     <wire>
-      <p1 x="400" y="400"/>
+      <p1 x="500" y="400"/>
       <p2 x="640" y="400"/>
     </wire>
     <wire>
@@ -144,8 +144,8 @@
       <p2 x="860" y="480"/>
     </wire>
     <wire>
-      <p1 x="400" y="500"/>
-      <p2 x="420" y="500"/>
+      <p1 x="500" y="500"/>
+      <p2 x="520" y="500"/>
     </wire>
     <wire>
       <p1 x="600" y="580"/>
