@@ -6,7 +6,6 @@
 - make pseudoinstructions: NOP, SHL, ROL (and more complex ones)
 - maybe divide pseudoinstructions in single-instruction or multi-instruction?
 - write design-decisions docs for past changes:
-	- the instruction set redesign: a specific 8-bit opcode per instruction vs the 5-bit opcode + sub-opcodes I have now
 	- the memory map: RAM first (for the zero page) instead of ROM first, and the address decoder redesign
 	- the power-on race conditions
 	- the old PC and SP versions in `digital/discarded/` (less important)

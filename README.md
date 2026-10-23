@@ -75,6 +75,7 @@ Instruction set:
 
 Design decisions:
 
+- [Instruction Set Redesign](notes/design-decisions/instruction-set-redesign.md)
 - [ST Zero-Page Source Register](notes/design-decisions/st-zeropage.md)
 - [Fetch-Execute Overlap](notes/design-decisions/fetch-execute-overlap.md)
 - [Direct Jumps](notes/design-decisions/jumps.md)
