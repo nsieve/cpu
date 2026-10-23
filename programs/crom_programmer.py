@@ -3,7 +3,7 @@
 # EPROM 1:
 PC_INC   = 0    # increment the pc
 nPC_LD   = 1    # load the pc (for jmps)
-PC_OE    = 2    # pc outputs data to the address bus
+PC_OE    = 2    # 1 = the pc stops driving the address bus (wired to the active-low OE of its 245s, so by default the pc drives it)
 nPCL_OE  = 3    # pc outputs the lower byte to the data bus
 nPCH_OE  = 4    # pc outputs the higher byte to the data bus
 nIR_LD   = 5    # load the data from ROM the instruction register

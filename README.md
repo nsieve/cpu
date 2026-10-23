@@ -70,7 +70,8 @@ Instruction set:
 
 - [Instruction Set Architecture](notes/opcodes%26microinstructions/isa.md): every instruction, its opcode, cycles and flags
 - [Instruction Decoding](notes/opcodes%26microinstructions/instructiondecoding.md): how the 16-bit instruction word is split
-- [Control Bits](notes/opcodes%26microinstructions/controlbits.md): what each of the 40 control bits does (not written yet)
+- [Control Bits](notes/opcodes%26microinstructions/controlbits.md): what each of the 40 control bits does (generated)
+- [Instruction Set (Extended)](notes/opcodes%26microinstructions/instructionset_extended.md): the control bits of every instruction in every microstep (generated)
 - [Memory Map](notes/hardware-design/memory_map.md)
 
 Design decisions:
@@ -97,6 +98,7 @@ notes/
 programs/
   assembler.py            assembler for SFD-8 programs
   crom_programmer.py      generates the microcode for the control unit EPROMs
+  gen_docs.py             generates the control bits and microcode docs from crom_programmer.py
   main.asm                current test program
 ```
 
@@ -104,7 +106,7 @@ programs/
 
 You need [Digital](https://github.com/hneemann/Digital) and Python 3.
 
-1. Generate the microcode: running `python crom_programmer.py` inside `programs/` creates `eprom1.hex`, `eprom2.hex` and `eprom3.hex`.
+1. Generate the microcode: running `python crom_programmer.py` inside `programs/` creates `eprom1.hex`, `eprom2.hex` and `eprom3.hex`. After changing the microcode, `python gen_docs.py` regenerates `controlbits.md` and `instructionset_extended.md`, and warns if `isa.md` doesn't match the microcode.
 2. Assemble a program: `python assembler.py main.asm` creates `main.hex`.
 3. Load the files into the ROMs. Digital keeps the contents inside the `.dig` files, so this is only needed after changing the microcode or the program: in `CTRLUNIT.dig`, load `eprom1.hex`, `eprom2.hex` and `eprom3.hex` into `1ROM`, `2ROM` and `3ROM`, and in `CPU.dig`, load `main.hex` into the program EEPROM (right-click the component, edit its data and load the file).
 4. Open `digital/CPU.dig` and start the simulation. `CLK_SEL` switches between the automatic clock and the manual one.
