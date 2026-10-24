@@ -38,4 +38,4 @@ Not bugs, these are on purpose (or the price of something else), but they're eas
 
 Leftovers that should be removed or updated.
 
-- `notes/Attachments/adr_dec.png` shows the old address decoder (two 74138, a 7408 and a 7410, with `\FB_CS`). `ADDR_DEC.dig` is now a 7430 and a 7400 with 3 chip selects, so the picture needs a new screenshot.
+Nothing right now.
