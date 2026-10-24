@@ -100,8 +100,10 @@ programs/
   gen_docs.py             generates the control bits and microcode docs from crom_programmer.py
   main.asm                self-checking test (jumps, ST zp, free slots)
   max7219_test.asm        shows 12345 and 54321 on the 7-segment display
-  fibonacci.asm           16-bit Fibonacci on the 7-segment display
-  lib/max7219.asm         MAX7219 driver: SPI, init and decimal numbers (SHOW_DEC)
+  fibonacci.asm           32-bit Fibonacci on the 8-digit display
+  primes.asm              prime numbers with the Sieve of Eratosthenes
+  keyboard_test.asm       shows the code of each key pressed
+  lib/max7219.asm         MAX7219 driver: SPI, init and decimal numbers (SHOW_DEC, SHOW_DEC32)
 ```
 
 ## Running It
