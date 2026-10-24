@@ -53,12 +53,17 @@ def clean_and_tokenize(raw_line):
     return label, tokens
 
 def parse_val(val_str, symbol_table):
-    if val_str.startswith("LOW:"):
-        return parse_val(val_str[4:], symbol_table) & 0xFF
-    if val_str.startswith("HIGH:"):
-        return (parse_val(val_str[5:], symbol_table) >> 8) & 0xFF
+    if val_str.startswith(("LOW:", "HIGH:")):
+        prefix, rest = val_str.split(":", 1)
+        val = parse_val(rest, symbol_table)
+        if not 0 <= val <= 0xFFFF:
+            raise ValueError(f"'{rest}' ({val}) doesn't fit in 16 bits")
+        return (val & 0xFF) if prefix == "LOW" else (val >> 8)
     if val_str in symbol_table:
         return symbol_table[val_str]
+    if '+' in val_str[1:]:
+        # sums of numbers and symbols, like SIEVE+LIMIT+1
+        return sum(parse_val(part, symbol_table) for part in val_str.split('+'))
     if val_str.startswith(("0x", "0X")):
         return int(val_str, 16)
     if val_str.isdigit() or (val_str.startswith('-') and val_str[1:].isdigit()):

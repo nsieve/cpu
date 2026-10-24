@@ -10,7 +10,7 @@
 
 .EQU KB_DATA     0xBF00
 .EQU KB_STATUS   0xBF01
-.EQU KEY         0x20       ; last key read
+.EQU KEY         0x40       ; last key read
 
 .ORG 0xC000
 
