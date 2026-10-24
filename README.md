@@ -82,11 +82,16 @@ Design decisions:
 - [74191 Load Synchronization](notes/design-decisions/74191-loadsync.md)
 - [Interrupts (and Why I Removed Them)](notes/design-decisions/interrupts.md)
 
+Testing:
+
+- [Verification](notes/verification.md): the emulator, the tests of every instruction and module, and the cycle-by-cycle check of the circuit
+
 ## Repository Structure
 
 ```
 digital/                  Digital simulation, one .dig file per module (CPU.dig is the top level)
   discarded/              old versions of modules I replaced
+  tests/                  module tests, and the check of CPU.dig against the emulator
 notes/
   hardware-design/        one doc per module
   opcodes&microinstructions/
@@ -98,6 +103,8 @@ programs/
   assembler.py            assembler for SFD-8 programs
   crom_programmer.py      generates the microcode for the control unit EPROMs
   gen_docs.py             generates the control bits and microcode docs from crom_programmer.py
+  emulator.py             cycle-exact emulator that runs the real microcode
+  tests/                  tests of every instruction, the microcode files and the programs
   main.asm                self-checking test (jumps, ST zp, free slots)
   max7219_test.asm        shows 12345 and 54321 on the 7-segment display
   fibonacci.asm           32-bit Fibonacci on the 8-digit display
@@ -114,6 +121,7 @@ You need [Digital](https://github.com/hneemann/Digital) and Python 3.
 2. Assemble a program: `python assembler.py main.asm` creates `main.hex`.
 3. Load the files into the ROMs. Digital keeps the contents inside the `.dig` files, so this is only needed after changing the microcode or the program: in `CTRLUNIT.dig`, load `eprom1.hex`, `eprom2.hex` and `eprom3.hex` into `1ROM`, `2ROM` and `3ROM`, and in `CPU.dig`, load `main.hex` into the program EEPROM (right-click the component, edit its data and load the file).
 4. Open `digital/CPU.dig` and start the simulation. `CLK_SEL` switches between the automatic clock and the manual one.
+5. To run a program without Digital, `python emulator.py primes.asm` runs it on the emulator, and `python -m unittest discover -s tests` checks every instruction. The tests of the circuits are in `digital/tests/` and need Java (see [Verification](notes/verification.md)).
 
 ## Status
 
