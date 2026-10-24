@@ -11,7 +11,6 @@ Things that exist but don't work as intended.
 | `ROR` does the same as `SHR` | microcode | `SHR_IN0` is never set, and the bit shifted out doesn't go into C. |
 | `POPF` loads the flags from the ALU | microcode | Step 2 doesn't set `FL_SEL`. |
 | `AND`/`OR`/`XOR` load garbage into C and V | hardware | The 4 ALU flags are loaded together, so C and V get whatever the 74382 outputs on a logic operation. Only Z and N are meaningful. |
-| MMIO and framebuffer decoding don't work as intended | `ADDR_DEC.dig` | From the old to-do list, check if it's still true. |
 
 ## Missing
 
@@ -39,4 +38,4 @@ Not bugs, these are on purpose (or the price of something else), but they're eas
 
 Leftovers that should be removed or updated.
 
-- `notes/Attachments/Pasted image 20260911215024.png` needs a real name.
+- `notes/Attachments/adr_dec.png` shows the old address decoder (two 74138, a 7408 and a 7410, with `\FB_CS`). `ADDR_DEC.dig` is now a 7430 and a 7400 with 3 chip selects, so the picture needs a new screenshot.

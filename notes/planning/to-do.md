@@ -2,7 +2,6 @@
 - make a block diagram of the register file (if possible)
 - fix the 'and' row of the table alu core
 - finish the program counter file
-- fix address decoder (mmio and fb dont work as intended)
 - make pseudoinstructions: NOP, SHL, ROL (and more complex ones)
 - maybe divide pseudoinstructions in single-instruction or multi-instruction?
 - write design-decisions docs for past changes:
@@ -11,4 +10,4 @@
 	- the old PC and SP versions in `digital/discarded/` (less important)
 - (once most documentation is finished) change the folder system to have each module its own folder with the notes, images and its real hardware implementation, datasheets, etc.
 - update README.md
-- replace the keyboard and timer interrupts with polling through the MMIO, and decide what the stop button does
+- add a timer the programs can poll through the MMIO (the keyboard polling is done), and decide what the stop button does
