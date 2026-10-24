@@ -1,0 +1,39 @@
+Program counter (PC.dig): four 74161 counters.
+  - On the rising clock edge it loads A_IN when nPC_LD or nRST is low, otherwise it counts if PC_INC = 1.
+  - It drives the address bus (A_OUT) unless PC_OE = 1 or RST = 1.
+  - nPCL_OE / nPCH_OE put its low / high byte on the data bus (D_OUT).
+A 'C' in the CLK column is a full clock pulse (0, 1, 0) after the other inputs are set.
+
+## the reset loads what's on the address bus
+A_IN   PC_INC nPC_LD PC_OE nPCL_OE nPCH_OE CLK RST nRST A_OUT  D_OUT
+# during the reset the reset buffer puts 0xC000 on the bus, and the PC isn't driving it
+0xC000 0      1      0     1       1       C   1   0    Z      Z
+0xC000 1      1      0     1       1       C   1   0    Z      Z
+# after it, the PC drives the bus with 0xC000
+0x1234 0      1      0     1       1       0   0   1    0xC000 Z
+
+## load and count
+A_IN   PC_INC nPC_LD PC_OE nPCL_OE nPCH_OE CLK RST nRST A_OUT  D_OUT
+0x00FE 0      0      0     1       1       C   0   1    0x00FE Z
+0x1234 1      1      0     1       1       C   0   1    0x00FF Z
+0x1234 1      1      0     1       1       C   0   1    0x0100 Z
+# without PC_INC it keeps its value
+0x1234 0      1      0     1       1       C   0   1    0x0100 Z
+# from 0xFFFF it goes back to 0
+0xFFFF 0      0      0     1       1       C   0   1    0xFFFF Z
+0x1234 1      1      0     1       1       C   0   1    0x0000 Z
+# the load wins over counting
+0xABCD 1      0      0     1       1       C   0   1    0xABCD Z
+
+## count 600 times (the carry goes through all four counters)
+A_IN   PC_INC nPC_LD PC_OE nPCL_OE nPCH_OE CLK RST nRST A_OUT  D_OUT
+0x0EF0 0      0      0     1       1       C   0   1    0x0EF0 Z
+repeat(600) 0 1 1 0 1 1 C 0 1 (0x0EF1+n) Z
+
+## outputs
+A_IN   PC_INC nPC_LD PC_OE nPCL_OE nPCH_OE CLK RST nRST A_OUT  D_OUT
+0xABCD 0      0      0     1       1       C   0   1    0xABCD Z
+0x1234 0      1      0     0       1       0   0   1    0xABCD 0xCD
+0x1234 0      1      0     1       0       0   0   1    0xABCD 0xAB
+0x1234 0      1      1     1       1       0   0   1    Z      Z
+0x1234 0      1      1     0       1       0   0   1    Z      0xCD

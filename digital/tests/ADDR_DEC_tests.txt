@@ -1,0 +1,16 @@
+Address decoder (ADDR_DEC.dig): one active-low chip select per memory region.
+  RAM   0x0000-0xBEFF  nRAM_CS
+  MMIO  0xBF00-0xBFFF  nMMIO_CS
+  ROM   0xC000-0xFFFF  nROM_CS
+
+## every high byte
+A_IN    nRAM_CS          nROM_CS          nMMIO_CS
+repeat(256) (n<<8) (ite(n<0xBF,0,1)) (ite(n>0xBF,0,1)) (ite(n=0xBF,0,1))
+
+## the low byte doesn't matter
+A_IN nRAM_CS nROM_CS nMMIO_CS
+repeat(256) (0x0000|n) 0 1 1
+repeat(256) (0xBE00|n) 0 1 1
+repeat(256) (0xBF00|n) 1 1 0
+repeat(256) (0xC000|n) 1 0 1
+repeat(256) (0xFF00|n) 1 0 1

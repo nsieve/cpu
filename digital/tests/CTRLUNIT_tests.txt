@@ -1,0 +1,57 @@
+Control unit (CTRLUNIT.dig): the micro-PC (a 74163) and the 3 microcode ROMs.
+  - The ROM address is OPC, the micro-PC (step) and the flags: OPC | step << 8 | Z C N V << 12.
+  - On the rising clock edge the micro-PC goes to 0 when nMPC_RST or nRST is low, otherwise it
+    counts when nHALT = 1, and stays when nHALT = 0.
+  - While nRST = 0 the ROMs are off and the pull resistors make every control bit inactive.
+{cw OPC STEP FLAGS} is filled in by run_module_tests.py with the 3 words crom_programmer.py
+gives for that address (FLAGS = Z | C << 1 | N << 2 | V << 3), and {reset} with every control
+bit inactive, so this follows the microcode when it changes.
+
+## the reset turns every control bit off
+OPC  Z C N V nMPC_RST nHALT CLK nRST C0_15 C16_31 C32_47
+0x60 0 0 0 0 1        1     C   0    {reset}
+0xE8 1 1 1 1 1        1     0   0    {reset}
+0xFF 0 1 0 1 1        1     C   0    {reset}
+
+## the micro-PC counts from 0 after the reset
+OPC  Z C N V nMPC_RST nHALT CLK nRST C0_15 C16_31 C32_47
+# JMP label (opcode 0xE8) has 5 different steps
+0xE8 0 0 0 0 1        1     C   0    {reset}
+0xE8 0 0 0 0 1        1     0   1    {cw 0xE8 0 0}
+0xE8 0 0 0 0 1        1     C   1    {cw 0xE8 1 0}
+0xE8 0 0 0 0 1        1     C   1    {cw 0xE8 2 0}
+0xE8 0 0 0 0 1        1     C   1    {cw 0xE8 3 0}
+0xE8 0 0 0 0 1        1     C   1    {cw 0xE8 4 0}
+# nMPC_RST clears it on the next edge
+0xE8 0 0 0 0 0        1     C   1    {cw 0xE8 0 0}
+# nHALT stops it
+0xE8 0 0 0 0 1        1     C   1    {cw 0xE8 1 0}
+0xE8 0 0 0 0 1        0     C   1    {cw 0xE8 1 0}
+0xE8 0 0 0 0 1        0     C   1    {cw 0xE8 1 0}
+0xE8 0 0 0 0 1        1     C   1    {cw 0xE8 2 0}
+# nMPC_RST wins over nHALT, and so does nRST
+0xE8 0 0 0 0 0        0     C   1    {cw 0xE8 0 0}
+0xE8 0 0 0 0 1        1     C   1    {cw 0xE8 1 0}
+0xE8 0 0 0 0 1        0     C   0    {reset}
+0xE8 0 0 0 0 1        1     0   1    {cw 0xE8 0 0}
+
+## the opcode and the flags are part of the address
+OPC  Z C N V nMPC_RST nHALT CLK nRST C0_15 C16_31 C32_47
+0xDA 0 0 0 0 1        1     C   0    {reset}
+0xDA 0 0 0 0 1        1     0   1    {cw 0xDA 0 0}
+# JZ label, step 1: it only loads the MAR if Z = 1
+0xDA 0 0 0 0 1        1     C   1    {cw 0xDA 1 0}
+0xDA 1 0 0 0 1        1     0   1    {cw 0xDA 1 1}
+# ADC A, B, step 1: ALU_CIN follows C
+0x70 0 0 0 0 1        1     0   1    {cw 0x70 1 0}
+0x70 0 1 0 0 1        1     0   1    {cw 0x70 1 2}
+# JN, JV
+0xDC 0 0 1 0 1        1     0   1    {cw 0xDC 1 4}
+0xDE 0 0 0 1 1        1     0   1    {cw 0xDE 1 8}
+
+## after step 15 it goes back to 0
+OPC  Z C N V nMPC_RST nHALT CLK nRST C0_15 C16_31 C32_47
+0xE8 0 0 0 0 1        1     C   0    {reset}
+repeat(15) 0xE8 0 0 0 0 1 1 C 1 X X X
+0xE8 0 0 0 0 1        1     C   1    {cw 0xE8 0 0}
+0xE8 0 0 0 0 1        1     C   1    {cw 0xE8 1 0}

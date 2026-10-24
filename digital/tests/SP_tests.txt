@@ -1,0 +1,42 @@
+Stack pointer (SP.dig): four 74191 up/down counters.
+  - nSP_LD loads A_IN (the address bus). The 74191 load is asynchronous, so it's ORed with
+    CLK: it only loads while CLK is low.
+  - With nSP_INC = 0 it counts on the rising clock edge, up if SP_DIR = 0, down if 1.
+  - nSP_OE puts it on the address bus (A_OUT), nSPL_OE / nSPH_OE put its low / high byte on
+    the data bus (D_OUT).
+
+## load and outputs
+A_IN   nSP_INC SP_DIR nSP_LD nSP_OE nSPH_OE nSPL_OE CLK A_OUT  D_OUT
+0xBAFF 1       0      0      0      1       1       0   0xBAFF Z
+0xBAFF 1       0      1      0      1       1       0   0xBAFF Z
+# no load: a new A_IN doesn't matter, and neither does the clock
+0x1234 1       0      1      0      1       1       0   0xBAFF Z
+0x1234 1       0      1      0      1       1       C   0xBAFF Z
+0x1234 1       0      1      1      0       1       0   Z      0xBA
+0x1234 1       0      1      1      1       0       0   Z      0xFF
+0x1234 1       0      1      1      1       1       0   Z      Z
+
+## push and pop (count down and up)
+A_IN   nSP_INC SP_DIR nSP_LD nSP_OE nSPH_OE nSPL_OE CLK A_OUT  D_OUT
+0xBAFF 1       0      0      0      1       1       0   0xBAFF Z
+0xBAFF 1       0      1      0      1       1       0   0xBAFF Z
+0xBAFF 0       1      1      0      1       1       C   0xBAFE Z
+0xBAFF 0       1      1      0      1       1       C   0xBAFD Z
+0xBAFF 0       0      1      0      1       1       C   0xBAFE Z
+0xBAFF 1       0      1      0      1       1       C   0xBAFE Z
+# across a byte and around 0xFFFF
+0x0100 1       0      0      0      1       1       0   0x0100 Z
+0x0100 1       0      1      0      1       1       0   0x0100 Z
+0x0100 0       1      1      0      1       1       C   0x00FF Z
+0x0100 0       0      1      0      1       1       C   0x0100 Z
+0x0000 1       0      0      0      1       1       0   0x0000 Z
+0x0000 1       0      1      0      1       1       0   0x0000 Z
+0x0000 0       1      1      0      1       1       C   0xFFFF Z
+0x0000 0       0      1      0      1       1       C   0x0000 Z
+
+## count 600 times down, then up
+A_IN   nSP_INC SP_DIR nSP_LD nSP_OE nSPH_OE nSPL_OE CLK A_OUT  D_OUT
+0xBAFF 1       0      0      0      1       1       0   0xBAFF Z
+0xBAFF 1       0      1      0      1       1       0   0xBAFF Z
+repeat(600) 0 0 1 1 0 1 1 C (0xBAFE-n) Z
+repeat(600) 0 0 0 1 0 1 1 C (0xB8A7+n+1) Z

@@ -1,0 +1,16 @@
+Address buffers (addr_buffer.dig): three 74245 that put fixed values on the address bus.
+  - nRST = 0 (reset): 0xC000, the start of the ROM, so the PC loads it.
+  - nHBA_OE = 0: the high byte is 0x00 (zero page). The low byte then comes from the IR,
+    which here is AB_L.
+  - Otherwise they don't drive anything.
+nRST and nHBA_OE are never 0 at the same time: both would drive the high byte (0xC0 and
+0x00). In the CPU that can't happen, because during the reset the control ROMs are off and
+the pull-up keeps nHBA_OE at 1.
+
+## reset and zero page
+AB_L nHBA_OE nRST A_BUS
+Z    1       0    0xC000
+0x42 0       1    0x0042
+0xFF 0       1    0x00FF
+0x00 0       1    0x0000
+Z    1       1    Z

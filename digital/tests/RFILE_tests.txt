@@ -1,0 +1,89 @@
+Register file (RFILE.dig): B-F (two 74173 each), X and Y (two 74191 each, a 16-bit counter).
+  - REG_LD_EN loads the register in B_10_8 (Rdst). B-F load on the rising clock edge. X and Y
+    have the 74191's asynchronous load, ORed with CLK, so they load while CLK is low.
+    Register 0 is A, which is in the ALU: it only pulls A_LD low.
+  - REG_OE_EN puts the register in B_7_5 (Rsrc) on DB_OUT, or the one in B_10_8 with SRC_SEL = 1.
+    For register 0 it only pulls A_OE low.
+  - With nXY_INC = 0 the XY pair counts on the rising clock edge (up if XY_DIR = 0, down if 1),
+    and nXY_AOE puts it on the address bus (AB_OUT).
+  - RST clears B-F (X and Y have no reset).
+DB_IN only changes while no load is on (see MAR_tests.txt).
+
+## store and read every register
+DB_IN B_10_8 B_7_5 REG_LD_EN REG_OE_EN nXY_INC XY_DIR nXY_AOE SRC_SEL CLK RST DB_OUT AB_OUT A_LD A_OE
+0x00  0      0     0         0         1       0      1       0       0   0   Z      Z      1    1
+0x11  1      0     1         0         1       0      1       0       C   0   Z      Z      1    1
+0x11  1      0     0         0         1       0      1       0       0   0   Z      Z      1    1
+0x22  2      0     1         0         1       0      1       0       C   0   Z      Z      1    1
+0x22  2      0     0         0         1       0      1       0       0   0   Z      Z      1    1
+0x33  3      0     1         0         1       0      1       0       C   0   Z      Z      1    1
+0x33  3      0     0         0         1       0      1       0       0   0   Z      Z      1    1
+0x44  4      0     1         0         1       0      1       0       C   0   Z      Z      1    1
+0x44  4      0     0         0         1       0      1       0       0   0   Z      Z      1    1
+0x55  5      0     1         0         1       0      1       0       C   0   Z      Z      1    1
+0x55  5      0     0         0         1       0      1       0       0   0   Z      Z      1    1
+0x66  6      0     1         0         1       0      1       0       C   0   Z      Z      1    1
+0x66  6      0     0         0         1       0      1       0       0   0   Z      Z      1    1
+0x77  7      0     1         0         1       0      1       0       C   0   Z      Z      1    1
+0x77  7      0     0         0         1       0      1       0       0   0   Z      Z      1    1
+# read them back through [7:5]
+0x00  0      1     0         1         1       0      1       0       0   0   0x11   Z      1    1
+0x00  0      2     0         1         1       0      1       0       0   0   0x22   Z      1    1
+0x00  0      3     0         1         1       0      1       0       0   0   0x33   Z      1    1
+0x00  0      4     0         1         1       0      1       0       0   0   0x44   Z      1    1
+0x00  0      5     0         1         1       0      1       0       0   0   0x55   Z      1    1
+0x00  0      6     0         1         1       0      1       0       0   0   0x66   Z      1    1
+0x00  0      7     0         1         1       0      1       0       0   0   0x77   Z      1    1
+# register 0 (A) is in the ALU: here it only pulls A_OE low
+0x00  0      0     0         1         1       0      1       0       0   0   Z      Z      1    0
+# SRC_SEL reads the register in [10:8] instead (ST zp)
+0x00  3      5     0         1         1       0      1       1       0   0   0x33   Z      1    1
+0x00  7      1     0         1         1       0      1       1       0   0   0x77   Z      1    1
+# XY on the address bus
+0x00  0      0     0         0         1       0      0       0       0   0   Z      0x6677 1    1
+# the registers keep their values
+0x00  0      0     0         0         1       0      1       0       C   0   Z      Z      1    1
+0x00  0      2     0         1         1       0      1       0       0   0   0x22   Z      1    1
+
+## A_LD and A_OE
+DB_IN B_10_8 B_7_5 REG_LD_EN REG_OE_EN nXY_INC XY_DIR nXY_AOE SRC_SEL CLK RST DB_OUT AB_OUT A_LD A_OE
+loop(r, 8)
+0x00  (r)    0     1         0         1       0      1       0       0   0   X      X      (ite(r=0,0,1)) 1
+0x00  (r)    0     0         0         1       0      1       0       0   0   X      X      1    1
+0x00  0      (r)   0         1         1       0      1       0       0   0   X      X      1    (ite(r=0,0,1))
+end loop
+
+## XY counts as one 16-bit register
+DB_IN B_10_8 B_7_5 REG_LD_EN REG_OE_EN nXY_INC XY_DIR nXY_AOE SRC_SEL CLK RST DB_OUT AB_OUT A_LD A_OE
+0x12  0      0     0         0         1       0      0       0       0   0   X      X      1    1
+0x12  6      0     1         0         1       0      0       0       C   0   X      X      1    1
+0x12  6      0     0         0         1       0      0       0       0   0   X      X      1    1
+0xFF  6      0     0         0         1       0      0       0       0   0   X      X      1    1
+0xFF  7      0     1         0         1       0      0       0       C   0   X      0x12FF 1    1
+0xFF  7      0     0         0         1       0      0       0       0   0   X      0x12FF 1    1
+0xFF  0      0     0         0         0       0      0       0       C   0   X      0x1300 1    1
+0xFF  0      0     0         0         0       1      0       0       C   0   X      0x12FF 1    1
+0xFF  0      0     0         0         0       1      0       0       C   0   X      0x12FE 1    1
+# 600 up and 600 down
+repeat(600) 0xFF 0 0 0 0 0 0 0 0 C 0 X (0x12FF+n) 1 1
+repeat(600) 0xFF 0 0 0 0 0 1 0 0 C 0 X (0x1555-n) 1 1
+# around 0xFFFF
+0xFF  6      0     1         0         1       0      0       0       C   0   X      X      1    1
+0xFF  6      0     0         0         1       0      0       0       0   0   X      X      1    1
+0xFF  7      0     1         0         1       0      0       0       C   0   X      0xFFFF 1    1
+0xFF  7      0     0         0         1       0      0       0       0   0   X      0xFFFF 1    1
+0xFF  0      0     0         0         0       0      0       0       C   0   X      0x0000 1    1
+0xFF  0      0     0         0         0       1      0       0       C   0   X      0xFFFF 1    1
+
+## RST clears B-F but not X and Y
+DB_IN B_10_8 B_7_5 REG_LD_EN REG_OE_EN nXY_INC XY_DIR nXY_AOE SRC_SEL CLK RST DB_OUT AB_OUT A_LD A_OE
+0x5A  1      0     1         0         1       0      1       0       C   0   X      X      1    1
+0x5A  1      0     0         0         1       0      1       0       0   0   X      X      1    1
+0x5A  5      0     1         0         1       0      1       0       C   0   X      X      1    1
+0x5A  5      0     0         0         1       0      1       0       0   0   X      X      1    1
+0x5A  6      0     1         0         1       0      1       0       C   0   X      X      1    1
+0x5A  6      0     0         0         1       0      1       0       0   0   X      X      1    1
+0x00  0      1     0         1         1       0      1       0       0   0   0x5A   X      1    1
+0x00  0      1     0         1         1       0      1       0       0   1   0x00   X      1    1
+0x00  0      5     0         1         1       0      1       0       0   0   0x00   X      1    1
+0x00  0      6     0         1         1       0      1       0       0   0   0x5A   X      1    1

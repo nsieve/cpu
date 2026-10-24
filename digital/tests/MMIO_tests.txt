@@ -1,0 +1,50 @@
+MMIO (MMIO.dig): a 74138 on A0-A2 (A3-A7 aren't decoded, so the registers repeat every
+8 bytes), two 74377 to write and two 74245 to read.
+  0xBF00  read   keyboard data (KB_IN), and KB_EN goes low while it's read
+  0xBF01  read   keyboard status: bit 7 = KB_ST
+  0xBF02  write  SPI_OUT (5 bits, D5-D7 aren't used)
+  0xBF03  write  DISPLAY
+The 74377 clock is NAND(selected, MEM_WR), so a write is latched when MEM_WR goes back to 0.
+Only one input changes per row around a write: if nMMIO_CS and MEM_WR changed together, the
+inverter on nMMIO_CS would make a glitch on that clock.
+
+## writes
+A_IN   D_IN nMMIO_CS MEM_WR MEM_RD KB_IN KB_ST D_OUT SPI_OUT DISPLAY KB_EN
+0xBF02 0x15 1        0      0      0x00  0     Z     X       X       1
+0xBF02 0x15 0        0      0      0x00  0     Z     X       X       1
+0xBF02 0x15 0        1      0      0x00  0     Z     X       X       1
+0xBF02 0x15 0        0      0      0x00  0     Z     0x15    X       1
+# only 5 bits
+0xBF02 0xFF 0        0      0      0x00  0     Z     0x15    X       1
+0xBF02 0xFF 0        1      0      0x00  0     Z     0x15    X       1
+0xBF02 0xFF 0        0      0      0x00  0     Z     0x1F    X       1
+# DISPLAY
+0xBF03 0xA5 0        0      0      0x00  0     Z     0x1F    X       1
+0xBF03 0xA5 0        1      0      0x00  0     Z     0x1F    X       1
+0xBF03 0xA5 0        0      0      0x00  0     Z     0x1F    0xA5    1
+# 0xBF0A is the same as 0xBF02
+0xBF0A 0x0C 0        0      0      0x00  0     Z     0x1F    0xA5    1
+0xBF0A 0x0C 0        1      0      0x00  0     Z     0x1F    0xA5    1
+0xBF0A 0x0C 0        0      0      0x00  0     Z     0x0C    0xA5    1
+# writes to the other registers don't change them
+0xBF01 0x77 0        0      0      0x00  0     Z     0x0C    0xA5    1
+0xBF01 0x77 0        1      0      0x00  0     Z     0x0C    0xA5    1
+0xBF01 0x77 0        0      0      0x00  0     Z     0x0C    0xA5    1
+# not selected: nothing happens
+0xBF02 0x01 1        0      0      0x00  0     Z     0x0C    0xA5    1
+0xBF02 0x01 1        1      0      0x00  0     Z     0x0C    0xA5    1
+0xBF02 0x01 1        0      0      0x00  0     Z     0x0C    0xA5    1
+
+## reads
+A_IN   D_IN nMMIO_CS MEM_WR MEM_RD KB_IN KB_ST D_OUT SPI_OUT DISPLAY KB_EN
+0xBF00 0x00 0        0      1      0x41  1     0x41  X       X       0
+0xBF00 0x00 0        0      0      0x41  1     Z     X       X       1
+0xBF01 0x00 0        0      1      0x41  1     0x80  X       X       1
+0xBF01 0x00 0        0      1      0x41  0     0x00  X       X       1
+# SPI_OUT and DISPLAY can't be read
+0xBF02 0x00 0        0      1      0x41  1     Z     X       X       1
+0xBF03 0x00 0        0      1      0x41  1     Z     X       X       1
+# the mirrors: 0xBFF8 is the keyboard data too
+0xBFF8 0x00 0        0      1      0x42  1     0x42  X       X       0
+# not selected
+0xBF00 0x00 1        0      1      0x41  1     Z     X       X       1

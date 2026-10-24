@@ -1,0 +1,29 @@
+Reset synchronizer (RST_HARDWARE.dig): a 7474. RST_IN is the active-low reset button
+(ANDed with the power-on Reset in CPU.dig). Pressing it sets the first flip-flop right away,
+the second one takes it on the next rising edge (RST = 1, nRST = 0), and RST goes off on the
+first edge after the button is released.
+
+## power-on and the button
+CLK RST_IN RST nRST
+# the inputs start at 0, so RST_IN is low while the circuit starts, like with the power-on
+# Reset: the first edge turns RST on
+C   1      1   0
+C   1      0   1
+C   1      0   1
+# pressing the button: nothing until the next edge
+0   0      0   1
+C   0      1   0
+C   0      1   0
+# released: still in reset until the next edge
+0   1      1   0
+C   1      0   1
+C   1      0   1
+
+## a press shorter than a clock period is still caught
+CLK RST_IN RST nRST
+C   1      1   0
+C   1      0   1
+0   0      0   1
+0   1      0   1
+C   1      1   0
+C   1      0   1

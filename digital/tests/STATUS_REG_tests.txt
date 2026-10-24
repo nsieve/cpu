@@ -1,0 +1,24 @@
+Status register (STATUS_REG.dig): a 74173 with a 74157 in front and a 74245 behind.
+  - On the rising clock edge it loads when nFL_LD = 0: the ALU flags if FL_SEL = 0, the low 4
+    bits of D_IN if FL_SEL = 1 (POPF).
+  - Z, C, N, V are always out. nFL_OE puts them on the data bus as 0000VNCZ (PUSHF).
+  - It has no reset (nRST isn't connected inside).
+
+## load from the ALU
+D_IN Z_FLAG C_FLAG N_FLAG V_FLAG nFL_OE nFL_LD FL_SEL CLK nRST D_OUT Z C N V
+loop(f, 16)
+0x00 (f&1) ((f>>1)&1) ((f>>2)&1) ((f>>3)&1) 0 0 0 C 1 (f) (f&1) ((f>>1)&1) ((f>>2)&1) ((f>>3)&1)
+end loop
+
+## load from the data bus (only the low 4 bits)
+D_IN Z_FLAG C_FLAG N_FLAG V_FLAG nFL_OE nFL_LD FL_SEL CLK nRST D_OUT Z C N V
+loop(f, 16)
+(0xA0|f) ((f&1)^1) 0 1 0 0 0 1 C 1 (f) (f&1) ((f>>1)&1) ((f>>2)&1) ((f>>3)&1)
+end loop
+
+## it keeps the flags without nFL_LD, and the data bus output turns off
+D_IN Z_FLAG C_FLAG N_FLAG V_FLAG nFL_OE nFL_LD FL_SEL CLK nRST D_OUT Z C N V
+0x00 1      0      1      0      0      0      0      C   1    0x05  1 0 1 0
+0x00 0      1      0      1      0      1      0      C   1    0x05  1 0 1 0
+0x0F 0      1      0      1      0      1      1      C   1    0x05  1 0 1 0
+0x00 0      1      0      1      1      1      0      0   1    Z     1 0 1 0
