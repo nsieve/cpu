@@ -117,8 +117,10 @@ public class CpuTrace {
 
         // the power-on reset: clock until RST has been on and gone off again. Every line is
         // sampled right after a rising edge (CLK high): the registers have just loaded, and the
-        // buses and control word are the ones of the new step. With CLK high the MAR, SP, X and
-        // Y can't load (their async load is ORed with CLK), so nothing changes until the next edge.
+        // address bus and control word are the ones of the new step. With CLK high the MAR, SP,
+        // X and Y can't load (their async load is ORed with CLK), so nothing changes until the
+        // next edge. The data bus is sampled in the second half (CLK low), because MEM_RD and
+        // MEM_WR are gated with the clock (nMEM.dig), so memory only drives it then.
         boolean sawReset = false;
         for (int edges = 0; edges < 20; edges++) {
             clk.setValue(1); m.doStep();
@@ -126,6 +128,10 @@ public class CpuTrace {
             else if (sawReset) break;
             clk.setValue(0); m.doStep();
         }
+        // while Digital settles the circuit at power-up, CLK starts low, so nMEM.dig lets the
+        // strobes through, and a glitch on MEM_WR sometimes writes a random byte (not in every
+        // run). Real RAM is random at power-on anyway, so clear it: the emulator starts with 0.
+        for (int addr = 0; addr < 0xBF00; addr++) ram.getMemory().setData(addr, 0);
         if (interval == 0) type(m, keyboards, typed, keys);
         out.println("# cycle upc ir abus dbus control A X Y flags");
         long cycle = 0;
@@ -139,11 +145,13 @@ public class CpuTrace {
             long flags = (get("TOP:Z").getValue() & 1) | (get("TOP:C").getValue() & 1) << 1
                        | (get("TOP:N").getValue() & 1) << 2 | (get("TOP:V").getValue() & 1) << 3;
             long control = c0.getValue() | c1.getValue() << 16 | c2.getValue() << 32;
-            out.printf("%d %X %04X %s %s %012X %02X %02X %02X %X%n", cycle, upc.getValue(), ir,
-                       bus(abus, 4), bus(dbus, 2), control, a, x, y, flags);
-            cycle++;
-            if (nhalt.getValue() == 0) break;
+            String ab = bus(abus, 4);
+            boolean halted = nhalt.getValue() == 0;
             clk.setValue(0); m.doStep();
+            out.printf("%d %X %04X %s %s %012X %02X %02X %02X %X%n", cycle, upc.getValue(), ir,
+                       ab, bus(dbus, 2), control, a, x, y, flags);
+            cycle++;
+            if (halted) break;
             clk.setValue(1); m.doStep();
         }
         out.println("# ram (address value, only the bytes that aren't 0)");

@@ -80,6 +80,7 @@ Design decisions:
 - [Fetch-Execute Overlap](notes/design-decisions/fetch-execute-overlap.md)
 - [Direct Jumps](notes/design-decisions/jumps.md)
 - [74191 Load Synchronization](notes/design-decisions/74191-loadsync.md)
+- [Gating the Memory Strobes with the Clock](notes/design-decisions/memory-strobes.md)
 - [Interrupts (and Why I Removed Them)](notes/design-decisions/interrupts.md)
 
 Testing:

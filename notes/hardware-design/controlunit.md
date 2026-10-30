@@ -82,7 +82,7 @@ The only way out is the reset button (see `reset.md`).
 
 The EPROM outputs aren't latched. After every clock edge, the address changes (new microstep, new opcode or new flags), and while the EPROMs settle, their outputs can glitch for a short time (up to the access time of the chip).
 
-For anything edge-triggered (registers, counters, the IR) this doesn't matter, because they only sample their control bits on the next clock edge, when the outputs are already stable. It could matter for level-sensitive signals, mainly `MEM_WR` on the RAM, since a glitch could write to the wrong address. It works fine in the simulation, but I haven't looked into it yet for the real hardware. A common fix is to only let `MEM_WR` through during the second half of the clock cycle, gating it with the clock. This is an open point for the breadboard phase.
+For anything edge-triggered (registers, counters, the IR) this doesn't matter, because they only sample their control bits on the next clock edge, when the outputs are already stable. It does matter for the memory strobes: a glitch on `MEM_WR` could write to the wrong address, and a glitch on `MEM_RD` can be a real read (the keyboard was losing keys because of it). That's why `MEM_RD` and `MEM_WR` go through `nMEM.dig`, which only lets them through in the second half of the clock cycle, gating them with the clock (more in `design-decisions/memory-strobes.md`).
 
 ## Design Justifications
 

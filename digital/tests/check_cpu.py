@@ -33,16 +33,13 @@ CPU_DIG = os.path.join(ROOT, "digital", "CPU.dig")
 # (program, keys, cycles between keys, known difference). A known difference is a bug in
 # CPU.dig that isn't fixed yet (planning/issues.md): it's still run, but it only counts as
 # a failure if it stops being different, so the note can be removed.
-SHIFTER = "CPU.dig: the ALU's shifter output only goes to STATUS_REG's D IN, not to the data bus (missing junction)"
-KB_GLITCH = ("CPU.dig: KB_EN glitches when a fetch follows an MMIO write (MEM_RD is on before the address "
-             "settles), and every glitch takes a key out of the keyboard buffer")
 QUICK = [("programs/main.asm", "", 0, None),
          ("programs/tests/all_instructions.asm", "", 0, None),
-         ("programs/tests/shifts.asm", "", 0, SHIFTER),
+         ("programs/tests/shifts.asm", "", 0, None),
          ("programs/fibonacci.asm", "", 0, None),
          ("programs/max7219_test.asm", "", 0, None),
          ("programs/keyboard_test.asm", "Ab1", 10_000, None),       # typed while it waits for a key
-         ("programs/keyboard_test.asm", "AB", 1_000, KB_GLITCH)]    # typed while it sets up the display
+         ("programs/keyboard_test.asm", "AB", 1_000, None)]         # typed while it sets up the display
 SLOW = [("programs/primes.asm", "", 0, None)]
 NO_HALT_CYCLES = 40_000          # for programs that never halt (the keyboard test)
 MAX_CYCLES = 5_000_000

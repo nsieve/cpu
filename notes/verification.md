@@ -94,14 +94,16 @@ python3 digital/tests/check_cpu.py programs/fibonacci.asm
 
 `CpuTrace.java` runs `CPU.dig` with Digital's own simulator, without the GUI, with a program put into its EEPROM, and writes the state of every clock cycle: the micro-PC, the IR, the address bus, the data bus, the control word, A, X, Y and the flags. `check_cpu.py` runs the same program on the emulator and compares them cycle by cycle, and at the end it compares the RAM, `SPI_OUT`, the LEDs and the MAX7219 digits. When something is different, it says in which cycle and instruction, and what's different.
 
-The quick set is `main.asm`, `programs/tests/all_instructions.asm` (every instruction at least once), `fibonacci.asm`, `max7219_test.asm` and `keyboard_test.asm` with keys typed while it waits. Bugs in `CPU.dig` that aren't fixed yet are marked as known differences: they still run, and they only count as a failure if they stop being different.
+The quick set is `main.asm`, `programs/tests/all_instructions.asm` (every instruction at least once), `programs/tests/shifts.asm`, `fibonacci.asm`, `max7219_test.asm`, and `keyboard_test.asm` twice: with keys typed while it waits for one, and with keys typed while it sets up the display (that one found the keyboard bug below). Bugs in `CPU.dig` that aren't fixed yet are marked as known differences: they still run, and they only count as a failure if they stop being different.
 
 ## What They Found
 
-Everything matches cycle by cycle, including all 1,697,481 cycles of `primes.asm`, except two things in `CPU.dig`, which are in `planning/issues.md`:
+Everything matches cycle by cycle, including all 1,697,481 cycles of `primes.asm`. At first there were two differences in `CPU.dig`, both fixed now:
 
-- The result of `SHR` and `ROR` never reaches the data bus. In `CPU.dig`, the wire from the ALU's `ALU` output to `STATUS_REG`'s `D IN` (from (940,300) to (1040,300)) crosses the data bus wire coming up from `A_R OUT` at (960,300) without a junction, so A loads a floating bus. The `ALU` module itself is fine (its module test passes). The same junction is what `FL_SEL` would need for `POPF`.
-- The keyboard loses keys. When a fetch comes right after a write to the MMIO (like every `ST XY` to `SPI_OUT`), `MEM_RD` turns on while the address bus still points to the MMIO and then floats for a moment, so the MMIO decoder can select the keyboard with a read going on, and every glitch on `KB_EN` takes a key out of the buffer. Keys typed while the program waits are read fine. It's the same problem as `MEM_WR`: the read strobe needs to be gated with the clock too.
+- The result of `SHR` and `ROR` never reached the data bus. The wire from the ALU's `ALU` output to `STATUS_REG`'s `D IN` (from (940,300) to (1040,300)) crossed the data bus wire coming up from `A_R OUT` at (960,300) without a junction, so A loaded a floating bus. The `ALU` module itself was fine (its module test passed).
+- The keyboard lost keys. When a fetch came right after a write to the MMIO (like every `ST XY` to `SPI_OUT`), `MEM_RD` turned on while the address bus still pointed to the MMIO, so the MMIO decoder could select the keyboard with a read going on, and every glitch on `KB_EN` took a key out of the buffer. The fix was gating `MEM_RD` and `MEM_WR` with the clock (`nMEM.dig`, see `design-decisions/memory-strobes.md`).
+
+Because of that gating, `CpuTrace.java` samples the data bus in the second half of each cycle (`CLK` low), when the memory drives it, and everything else right after the rising edge. It also clears the RAM after the reset: while Digital settles the circuit at power-up, the clock starts low, so the strobes are let through, and a glitch on `MEM_WR` sometimes writes a random byte (not in every run). On the real CPU the RAM is random at power-on anyway, and the reset button can't cause it, because the EPROMs are off during the reset.
 
 They also confirm the known bugs: `ROR` does the same as `SHR`, `POPF` always loads `Z C - V` (the flags of the ALU's clear operation), and the logic operations overwrite C and V.
 

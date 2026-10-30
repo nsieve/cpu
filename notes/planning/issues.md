@@ -9,10 +9,8 @@ Things that exist but don't work as intended.
 | Issue | Where | Notes |
 | ----- | ----- | ----- |
 | `ROR` does the same as `SHR` | microcode | `SHR_IN0` is never set, and the bit shifted out doesn't go into C. |
-| `POPF` loads the flags from the ALU | microcode | Step 2 doesn't set `FL_SEL`. It also needs the junction below, because `STATUS_REG`'s `D IN` isn't on the data bus either. |
+| `POPF` loads the flags from the ALU | microcode | Step 2 doesn't set `FL_SEL`. |
 | `AND`/`OR`/`XOR` load garbage into C and V | hardware | The 4 ALU flags are loaded together, so C and V get whatever the 74382 outputs on a logic operation. Only Z and N are meaningful. |
-| The result of `SHR`/`ROR` never reaches the data bus | `CPU.dig` | The wire from the ALU's `ALU` output to `STATUS_REG`'s `D IN` ((940,300) to (1040,300)) crosses the data bus wire from `A_R OUT` at (960,300) without a junction, so A loads a floating bus. Found by `digital/tests/check_cpu.py`, see `verification.md`. |
-| The keyboard loses keys | `CPU.dig`, MMIO | When a fetch comes right after an MMIO write (every `ST XY` to `SPI_OUT`), `MEM_RD` turns on before the address bus settles, so `KB_EN` glitches and the keyboard drops a key each time. Keys typed while the program waits for one are fine. `MEM_RD` needs to be gated with the clock, like `MEM_WR`. See `verification.md`. |
 
 ## Missing
 
