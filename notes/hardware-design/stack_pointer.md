@@ -8,7 +8,7 @@ The SP is divided into two registers, named SPL (the low byte of the SP) and SPH
 The Stack Pointer follows an Empty Stack convention with downward growth, meaning the SP points to the next available unallocated memory address rather than the last pushed element.
 ### Initialization
 
-At the start of the program, the Stack Pointer is loaded via software with the address `0x3FFF`, which is the start of the Stack, and exactly the end of RAM.
+At the start of the program, the Stack Pointer is loaded via software. The hardware doesn't fix where the stack goes, but my programs put it at `0xBAFF`, right below the framebuffer area (see `memory_map.md`).
 
 ## Hardware Architecture & Data Path
 
@@ -36,11 +36,12 @@ The 74191 is a fully synchronous edge-triggered counter, and its outputs transit
 Now, the difference in execution cycles between `PUSH` and `POP` operations can be explained this way:
 ### PUSH (1 Cycle)
 
-The Stack Pointer points to the top of the stack (`0x3FFF`) and, on a single cycle, the RAM stores the current information from a register that is on the data bus on the current address the SP is pointing to, which is then decremented.
+The Stack Pointer points to the top of the stack (`0xBAFF`) and, on a single cycle, the RAM stores the current information from a register that is on the data bus on the current address the SP is pointing to, which is then decremented.
 
 During execution of step 1, SP drives a completely stable address onto the bus. 
 On the rising clock edge, the RAM latches the incoming register data simultaneously as SP decrements. Because SP does not change states until AFTER the clock edge triggers, no race condition or address instability occurs.
 This happens because of the physical propagation delay (t_pd) of the 74HC191. Static RAM architectures have an address hold time requirement (t_h) of 0 ns relative to the active write edge. Because the 74HC191 has a propagation delay between 31 ns and 38 ns (at Vcc = 4.5V), the address remains driven on the bus well after the memory write cycle completes, completing safely the operation.
+This only works because `MEM_WR` is gated with the clock, so the write ends right at the rising edge. Without the gating, the write would last until the EPROM outputs change, an access time after the edge, when the SP has already changed (see `design-decisions/memory-strobes.md`).
 
 <img src="../Attachments/sp_vw.png" alt="Stack Pointer" width="400" />
 
@@ -63,7 +64,7 @@ Having a full 16-bit SP allows the stack to reside anywhere in the 64KB address 
 
 ### Downward Growth
 
-Although modern CPUs work with upward growth, my intention was to match standard hardware conventions, and also because the lower addresses of RAM already contain the zero-page, dynamic vectors, etc.
+Although modern CPUs work with upward growth, my intention was to match standard hardware conventions, and also because the lower addresses of RAM already contain the zero page.
 
 
 

@@ -10,7 +10,6 @@ At reset, the PC loads the hardwired vector `0xC000`, which is the start of ROM
 ## Hardware Architecture & Data Path
 
 The PC is built from four 74161 4-bit synchronous binary counters cascaded into a single 16-bit counter. The output of the PC is driven either onto the address bus, for normal fetching operations, or the data bus, for loading the PC into the RAM.
-![](notes/Attachments/Pasted%20image%2020261023235822.png)
 <img src="../Attachments/pc_dig.png" alt="Program Counter ICs" width="900" />
 
 ### Reset Circuit
@@ -31,8 +30,8 @@ At first these were XOR gates, which only worked if the microcode wasn't using `
 | `PC_INC`  | HIGH         | Enables incrementing on the 74161s                 |
 | `nPC_LD`  | LOW          | Enables parallel load into the PC from address bus |
 | `PC_OE`   | *HIGH        | Drives the PC onto the address bus                 |
-| `nPCL_OE` | LOW          | Enables parallel load into the PCL from data bus   |
-| `nPCH_OE` | LOW          | Enables parallel load into the PCH from data bus   |
+| `nPCL_OE` | LOW          | Outputs the PCL onto the data bus                  |
+| `nPCH_OE` | LOW          | Outputs the PCH onto the data bus                  |
 | `RST`     | HIGH         | Forces PC load from vector and disables output     |
 
 _*note: the `PC_OE` is active LOW, but for the sake of convenience it's put as active high. It's done that way so that the microprogrammer doesn't need to activate it on every "normal" instruction_

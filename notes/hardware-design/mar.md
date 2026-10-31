@@ -23,7 +23,7 @@ The tri-state buffers connect the MAR to the address bus.
 | Signal     | Active Level | Function                                               |
 | ---------- | ------------ | ------------------------------------------------------ |
 | `nMARL_LD` | LOW          | Enables parallel load into MARL                        |
-| `nMARL_LD` | LOW          | Enables parallel load into MARH                        |
+| `nMARH_LD` | LOW          | Enables parallel load into MARH                        |
 | `nMAR_OE`  | LOW          | Drives the MAR onto the Address bus                    |
 | `nMAR_INC` | LOW          | Enables counting on the 74191s                         |
 | `MAR_DIR`  | HIGH         | Sets counter direction (LOW for `INC`, HIGH for `DEC`) |

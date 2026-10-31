@@ -8,13 +8,13 @@ When the CPU starts, almost everything inside it holds random values: the PC, th
 - the micro-PC goes to step 0, so the first thing the CPU does is a fetch
 - nothing else does anything while the reset is active (no loads, no writes, nothing driving the buses)
 
-The registers, the flags, the SP and the MAR are not reset, so the program has to initialize whatever it uses.
+The registers A-F are cleared to 0 (`RST` goes to the reset pins of their 74173s). X, Y, the flags, the SP and the MAR are not reset, so the program has to initialize whatever it uses.
 
 The reset is a button. To reset the CPU, I press it and release it while the clock is running (or while I pulse the manual clock). It doesn't matter when I press it, or for how long, and there's no manual sequence to follow.
 
 ## Hardware Architecture
 
-The reset touches 4 parts of the CPU:
+The reset touches 6 parts of the CPU:
 
 | Part                          | What it does during reset                                         |
 | ----------------------------- | ----------------------------------------------------------------- |
@@ -22,6 +22,8 @@ The reset touches 4 parts of the CPU:
 | Reset Buffer                  | drives `0xC000` onto the address bus (see `address_buffers.md`)   |
 | Program Counter               | stops driving the address bus and loads `0xC000`                  |
 | Control Unit                  | the EPROMs turn off, and the micro-PC is cleared                  |
+| ALU                           | clears A                                                          |
+| Register File                 | clears B-F (X and Y aren't cleared)                               |
 
 ### Reset Synchronizer
 

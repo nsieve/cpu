@@ -18,7 +18,7 @@ Things that should exist but don't yet.
 
 | What | Notes |
 | ---- | ----- |
-| Generic gates mapped to real chips | `CPU.dig`, `MAR.dig`, `SP.dig` and `MMIO.dig` still use 8 generic And/Or/Not gates instead of 74HC parts. |
+| Generic gates mapped to real chips | `CPU.dig`, `MAR.dig` and `SP.dig` still use 7 generic gates instead of 74HC parts: 3 AND and 1 OR in `CPU.dig` (the clock select and the reset button), 2 OR in `MAR.dig` and 1 OR in `SP.dig` (the load gating). |
 
 ## Limitations (by Design)
 
