@@ -15,8 +15,8 @@ An 8-bit CPU designed from scratch and built entirely from 74HC logic chips.
 - 32 opcodes that expand to 66 instructions using sub-opcodes
 - Microprogrammed control unit: 41 control bits on three 16-bit EPROMs, up to 16 microsteps per instruction
 - Most instructions take 2 cycles, because the fetch of the next instruction overlaps with the execution of the current one
-- 48 KB of RAM, 15 KB of ROM, a 1 KB framebuffer and 256 bytes of memory-mapped I/O
-- I/O: keyboard, timer and an SPI port for an OLED display
+- 47.75 KB of RAM (1 KB of it for the framebuffer), 16 KB of ROM and 256 bytes of memory-mapped I/O
+- I/O: keyboard, 8 LEDs and an SPI port (a MAX7219 7-segment display for now, an OLED later)
 - 77 logic chips so far (plus RAM, ROM and the three EPROMs)
 - Designed and simulated in [Digital](https://github.com/hneemann/Digital), and being built on breadboards
 
@@ -30,7 +30,7 @@ The SFD-8 is also my Bachelor's Thesis. This repository holds everything: the si
 
 Every instruction is a 16-bit word stored in the ROM. In the first cycle, the Program Counter puts its address on the address bus and the word is loaded into the Instruction Register. The upper byte of the instruction (the opcode), the step of the Micro-Program Counter and the four flags together form the address of the three EPROMs of the Control Unit, and the bits they output are the control signals for that step. In the second cycle the PC is incremented while the instruction executes, and most instructions finish right there.
 
-Data moves over an 8-bit data bus, shared by the register file, the ALU, memory, the flags and the 8-bit halves of the PC, the MAR and the Stack Pointer. Addresses go over a 16-bit address bus, which can be driven by the PC, the MAR, the XY register pair, the Stack Pointer, or the lower byte of the instruction (with the upper byte forced to `0x00` for the zero page). The Address Decoder looks at the address and enables the RAM, the ROM, the framebuffer or the MMIO.
+Data moves over an 8-bit data bus, shared by the register file, the ALU, memory, the flags, the lower byte of the instruction (for immediates) and the 8-bit halves of the PC, the MAR and the Stack Pointer. Addresses go over a 16-bit address bus, which can be driven by the PC, the MAR, the XY register pair, the Stack Pointer, or the lower byte of the instruction (with the upper byte forced to `0x00` for the zero page). The Address Decoder looks at the address and enables the RAM, the ROM or the MMIO.
 
 The ALU always works with the accumulator: one operand is A, the other one is a register or an immediate, and the result goes back into A.
 
@@ -44,9 +44,9 @@ The main modules are:
 - ALU: 8-bit, does ADD, ADC, SUB, SBC, AND, OR, XOR and shifts, with registers and immediates
 - Register File: the accumulator plus 7 registers, 2 of which (X and Y) work together as a 16-bit pointer
 - Status Register: holds the Z, C, N and V flags
-- Stack Pointer: 16-bit, grows down from the end of RAM
+- Stack Pointer: 16-bit, grows down from wherever the program puts it (`0xBAFF` in my programs, right below the framebuffer)
 - Memory Address Register: 16-bit up/down counter used to address memory
-- Address Decoder and MMIO: select RAM, ROM, framebuffer or I/O depending on the address
+- Address Decoder and MMIO: select RAM, ROM or I/O depending on the address
 
 ## Documentation
 
@@ -126,13 +126,13 @@ You need [Digital](https://github.com/hneemann/Digital) and Python 3.
 
 ## Status
 
-The whole datapath works in the simulation, and every instruction has its microcode. What's left is mostly fixing and testing, not building.
+The whole datapath works in the simulation, and every instruction has its microcode. What's left is mostly fixing and documenting, not building.
 
 - [x] All datapath modules built in Digital
 - [x] Microcode for every instruction
 - [x] Assembler
 - [ ] Fix the known bugs (see [issues](notes/planning/issues.md))
-- [ ] Test every instruction
+- [x] Test every instruction
 - [ ] Document every module
 - [ ] Map the remaining generic gates to real chips
 - [ ] Build it on breadboards (started)
