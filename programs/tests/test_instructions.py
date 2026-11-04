@@ -353,9 +353,7 @@ class TestStack(unittest.TestCase):
             cpu = run("PUSHF", flags=flags, sp=0xBAFF)
             self.assertEqual((cpu.ram[0xBAFF], cpu.sp), (flags, 0xBAFE))
 
-    @unittest.expectedFailure
     def test_popf(self):
-        # issues.md: POPF loads the flags from the ALU (step 2 doesn't set FL_SEL)
         for flags in range(16):
             cpu = run("POPF", sp=0xBAFE, ram={0xBAFF: flags})
             self.assertEqual((cpu.flags, cpu.sp), (flags, 0xBAFF), f"POPF of {flags:04b}")

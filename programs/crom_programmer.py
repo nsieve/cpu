@@ -368,7 +368,7 @@ def gen_microcode():
                     if microstep == 1:
                         control_word |= (1 << PC_OE) | (1 << nSP_OE) | (1 << nSP_INC)
                     elif microstep == 2:
-                        control_word |= (1 << PC_OE) | (1 << nFL_LD) | (1 << nSP_OE) | (1 << MEM_RD) | (1 << nMPC_RST)
+                        control_word |= (1 << PC_OE) | (1 << nFL_LD) | (1 << FL_SEL) | (1 << nSP_OE) | (1 << MEM_RD) | (1 << nMPC_RST)
 
                 elif sub_opcode == 7: # HALT
                     # step 1 only does the pc++ (so the pc points to the next instruction)

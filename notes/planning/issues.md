@@ -9,7 +9,6 @@ Things that exist but don't work as intended.
 | Issue | Where | Notes |
 | ----- | ----- | ----- |
 | `ROR` does the same as `SHR` | microcode | `SHR_IN0` is never set, and the bit shifted out doesn't go into C. |
-| `POPF` loads the flags from the ALU | microcode | Step 2 doesn't set `FL_SEL`. |
 | `AND`/`OR`/`XOR` load garbage into C and V | hardware | The 4 ALU flags are loaded together, so C and V get whatever the 74382 outputs on a logic operation. Only Z and N are meaningful. |
 
 ## Missing

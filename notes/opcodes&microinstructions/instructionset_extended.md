@@ -503,7 +503,7 @@ Step 0 is the fetch, and it's the same in every instruction. When a step depends
 | ---- | ------------ |
 | 0 | `nIR_LD`, `MEM_RD` |
 | 1 | `PC_INC`, `PC_OE`, `nSP_INC`, `nSP_OE` |
-| 2 | `PC_OE`, `nMPC_RST`, `MEM_RD`, `nFL_LD`, `nSP_OE` |
+| 2 | `PC_OE`, `nMPC_RST`, `MEM_RD`, `nFL_LD`, `FL_SEL`, `nSP_OE` |
 
 ### 0x1F subOp 0x7 --> HALT
 
