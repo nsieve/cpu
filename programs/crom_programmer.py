@@ -6,58 +6,61 @@ nPC_LD   = 1    # load the pc (for jmps)
 PC_OE    = 2    # 1 = the pc stops driving the address bus (wired to the active-low OE of its 245s, so by default the pc drives it)
 nPCL_OE  = 3    # pc outputs the lower byte to the data bus
 nPCH_OE  = 4    # pc outputs the higher byte to the data bus
-nIR_LD   = 5    # load the data from ROM the instruction register
-nIRD_OE  = 6    # output the lower byte of the ir to the data bus
-nIRA_OE  = 7    # output the lower byte of the ir to the address bus (LB)
-nHBA_OE  = 8    # forces the higher byte of the address bus to 0x00
-nMPC_RST = 9    # reset the microprogram counter (end of instruction)
-MEM_RD   = 10   # read memory bus (ROM/RAM/FB/MMIO)
-MEM_WR   = 11   # write in memory bus (RAM/FB/MMIO)
-nMARL_LD = 12   # load from data bus into the lower byte of the MAR
-nMARH_LD = 13   # load from data bus into the higher byte of the MAR
-nMAR_OE  = 14   # output the MAR to the address bus
-nMAR_INC = 15   # increment the MAR register
+nIRH_LD  = 5    # load the higher byte of the instruction register (the opcode) from ROM
+nIRL_LD  = 6    # load the lower byte of the instruction register from ROM (a fetch sets both)
+nIRD_OE  = 7    # output the lower byte of the ir to the data bus
+nIRA_OE  = 8    # output the lower byte of the ir to the address bus (LB)
+nHBA_OE  = 9    # forces the higher byte of the address bus to 0x00
+nMPC_RST = 10   # reset the microprogram counter (end of instruction)
+nXY_INC  = 11   # increment the XY register pair
+XY_DIR   = 12   # 0 = INC, 1 = DEC
+nXYA_OE  = 13   # XY register pair output to the address bus
+MEM_RD   = 14   # read memory bus (ROM/RAM/MMIO)
+MEM_WR   = 15   # write in memory bus (RAM/MMIO)
 
 # EPROM 2:
-MAR_DIR  = 16   # 0 = INC , 1 = DEC
-REG_LD   = 17   # register file load enable
-REG_OE   = 18   # register file output enable
-nXY_INC  = 19   # increment the XY register pair
-XY_DIR   = 20   # 0 = INC, 1 = DEC
-nXYA_OE  = 21   # XY register pair output to the address bus
-A_SEL    = 22   # multiplexor selector for the input of the accumulator. 0 = data bus, 1 = alu
-ALU_S0   = 23   # alu select line 0
-ALU_S1   = 24   # alu select line 1
-ALU_S2   = 25   # alu select line 2
-nALU_OE  = 26   # output the result of the alu to the data bus
-ALU_CIN  = 27   # carry in on the lowest alu chip
-nSHR_OE  = 28   # output a shift right of the accumulator
-SHR_IN0  = 29   # bit 0 of the shr buffer; 0 = SHR, 1 = ROR
-nFL_OE   = 30   # outputs the flag register to the data bus
-nFL_LD   = 31   # loads the flag register
+REG_LD   = 16   # register file load enable
+REG_OE   = 17   # register file output enable
+MAR_DIR  = 18   # 0 = INC , 1 = DEC
+nMARL_LD = 19   # load from data bus into the lower byte of the MAR
+nMARH_LD = 20   # load from data bus into the higher byte of the MAR
+nMAR_OE  = 21   # output the MAR to the address bus
+nMAR_INC = 22   # increment the MAR register
+A_SEL    = 23   # multiplexor selector for the input of the accumulator. 0 = data bus, 1 = alu
+ALU_S0   = 24   # alu select line 0
+ALU_S1   = 25   # alu select line 1
+ALU_S2   = 26   # alu select line 2
+nALU_OE  = 27   # output the result of the alu to the data bus
+ALU_CIN  = 28   # carry in on the lowest alu chip
+nSHR_OE  = 29   # output a shift right of the accumulator
+SHR_IN0  = 30   # bit 0 of the shr buffer; 0 = SHR, 1 = ROR
+nFL_OE   = 31   # outputs the flag register to the data bus
 
 # EPROM 3:
-FL_SEL   = 32   # mux that selects the flag register input between ALU and data bus (only first 4 flags)
-nSP_INC  = 33   # increment the SP register
-SP_DIR   = 34   # 0 = INC, 1 = DEC
-nSP_LD   = 35   # load data from the address bus to the sp
-nSP_OE   = 36   # output SP to the address bus
-nSPL_OE  = 37   # output SPL to the data bus
-nSPH_OE  = 38   # output SPH to the data bus
-SRC_SEL  = 39   # source decoder input. 0 = IR[7:5], 1 = IR[10:8] (for ST zp, reg)
-nHALT    = 40   # stops the micro-pc from counting (ENP/ENT of the 74163), so the cpu freezes in the current step
-# 41-47 unused
+nFLZN_LD = 32   # loads the Z and N flags
+nFLCV_LD = 33   # loads the C and V flags (logic operations only load Z and N, so C and V keep their value)
+FL_SEL   = 34   # mux that selects the flag register input between ALU and data bus
+nSP_INC  = 35   # increment the SP register
+SP_DIR   = 36   # 0 = INC, 1 = DEC
+nSP_LD   = 37   # load data from the address bus to the sp
+nSP_OE   = 38   # output SP to the address bus
+nSPL_OE  = 39   # output SPL to the data bus
+nSPH_OE  = 40   # output SPH to the data bus
+SRC_SEL  = 41   # source decoder input. 0 = IR[7:5], 1 = IR[10:8] (for ST zp, reg)
+nHALT    = 42   # stops the micro-pc from counting (ENP/ENT of the 74163), so the cpu freezes in the current step
+# 43-47 unused
 
 
 active_low_mask = (
     (1 << nPC_LD)   | (1 << nPCL_OE)  | (1 << nPCH_OE)   |
-    (1 << nIR_LD)   | (1 << nIRD_OE)  | (1 << nIRA_OE)   |
-    (1 << nHBA_OE)  | (1 << nMPC_RST) | (1 << nMARL_LD)  |
-    (1 << nMARH_LD) | (1 << nMAR_OE)  | (1 << nXY_INC)   |
-    (1 << nXYA_OE)  | (1 << nALU_OE)  | (1 << nSHR_OE)   |
-    (1 << nFL_OE)   | (1 << nFL_LD)   | (1 << nSP_INC)   |
+    (1 << nIRH_LD)  | (1 << nIRL_LD)  | (1 << nIRD_OE)   |
+    (1 << nIRA_OE)  | (1 << nHBA_OE)  | (1 << nMPC_RST)  |
+    (1 << nMARL_LD) | (1 << nMARH_LD) | (1 << nMAR_OE)   |
+    (1 << nMAR_INC) | (1 << nXY_INC)  | (1 << nXYA_OE)   |
+    (1 << nALU_OE)  | (1 << nSHR_OE)  | (1 << nFL_OE)    |
+    (1 << nFLZN_LD) | (1 << nFLCV_LD) | (1 << nSP_INC)   |
     (1 << nSP_LD)   | (1 << nSP_OE)   | (1 << nSPL_OE)   |
-    (1 << nSPH_OE)  | (1 << nMAR_INC) | (1 << nHALT)
+    (1 << nSPH_OE)  | (1 << nHALT)
 )
 
 
@@ -108,7 +111,7 @@ def gen_microcode():
         control_word = 0
 
         if microstep == 0:
-            control_word |= (1 << MEM_RD) | (1 << nIR_LD)
+            control_word |= (1 << MEM_RD) | (1 << nIRH_LD) | (1 << nIRL_LD)
         else:
             if microstep == 1:
                 control_word |= (1 << PC_INC)
@@ -189,51 +192,51 @@ def gen_microcode():
 
             elif base_opcode == 12:  # ADD A, reg
                 if microstep == 1:
-                    control_word |= (1 << ALU_S0) | (1 << ALU_S1) | (1 << REG_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFL_LD) | (1 << nMPC_RST)
+                    control_word |= (1 << ALU_S0) | (1 << ALU_S1) | (1 << REG_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFLZN_LD) | (1 << nFLCV_LD) | (1 << nMPC_RST)
 
             elif base_opcode == 13:  # ADD A, imm8
                 if microstep == 1:
-                    control_word |= (1 << ALU_S0) | (1 << ALU_S1) | (1 << nIRD_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFL_LD) | (1 << nMPC_RST)
+                    control_word |= (1 << ALU_S0) | (1 << ALU_S1) | (1 << nIRD_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFLZN_LD) | (1 << nFLCV_LD) | (1 << nMPC_RST)
 
             elif base_opcode == 14:  # ADC A, reg
                 if microstep == 1:
-                    control_word |= (1 << ALU_S0) | (1 << ALU_S1) | (1 << REG_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFL_LD) | (1 << nMPC_RST)
+                    control_word |= (1 << ALU_S0) | (1 << ALU_S1) | (1 << REG_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFLZN_LD) | (1 << nFLCV_LD) | (1 << nMPC_RST)
                     if c_flag:
                         control_word |= (1 << ALU_CIN)
 
             elif base_opcode == 15:  # SUB A, reg
                 if microstep == 1:
-                    control_word |= (1 << ALU_S1) | (1 << ALU_CIN) | (1 << REG_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFL_LD) | (1 << nMPC_RST)
+                    control_word |= (1 << ALU_S1) | (1 << ALU_CIN) | (1 << REG_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFLZN_LD) | (1 << nFLCV_LD) | (1 << nMPC_RST)
 
             elif base_opcode == 16:  # SBC A, reg
                 if microstep == 1:
-                    control_word |= (1 << ALU_S1) | (1 << REG_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFL_LD) | (1 << nMPC_RST)
+                    control_word |= (1 << ALU_S1) | (1 << REG_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFLZN_LD) | (1 << nFLCV_LD) | (1 << nMPC_RST)
                     if c_flag:
                         control_word |= (1 << ALU_CIN)
 
-            elif base_opcode == 17:  # AND A, reg
+            elif base_opcode == 17:  # AND A, reg (the logic operations only load Z and N, C and V keep their value)
                 if microstep == 1:
-                    control_word |= (1 << ALU_S1) | (1 << ALU_S2) | (1 << REG_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFL_LD) | (1 << nMPC_RST)
+                    control_word |= (1 << ALU_S1) | (1 << ALU_S2) | (1 << REG_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFLZN_LD) | (1 << nMPC_RST)
 
             elif base_opcode == 18:  # AND A, imm8
                 if microstep == 1:
-                    control_word |= (1 << ALU_S1) | (1 << ALU_S2) | (1 << nIRD_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFL_LD) | (1 << nMPC_RST)
+                    control_word |= (1 << ALU_S1) | (1 << ALU_S2) | (1 << nIRD_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFLZN_LD) | (1 << nMPC_RST)
 
             elif base_opcode == 19:  # OR A, reg
                 if microstep == 1:
-                    control_word |= (1 << ALU_S0) | (1 << ALU_S2) | (1 << REG_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFL_LD) | (1 << nMPC_RST)
+                    control_word |= (1 << ALU_S0) | (1 << ALU_S2) | (1 << REG_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFLZN_LD) | (1 << nMPC_RST)
 
             elif base_opcode == 20:  # XOR A, reg
                 if microstep == 1:
-                    control_word |= (1 << ALU_S2) | (1 << REG_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFL_LD) | (1 << nMPC_RST)
+                    control_word |= (1 << ALU_S2) | (1 << REG_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFLZN_LD) | (1 << nMPC_RST)
 
             elif base_opcode == 21:  # INC A
                 if microstep == 1:
-                    control_word |= (1 << ALU_S0) | (1 << ALU_S1) | (1 << ALU_CIN) | (1 << nIRD_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFL_LD) | (1 << nMPC_RST)
+                    control_word |= (1 << ALU_S0) | (1 << ALU_S1) | (1 << ALU_CIN) | (1 << nIRD_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFLZN_LD) | (1 << nFLCV_LD) | (1 << nMPC_RST)
 
             elif base_opcode == 22:  # DEC A
                 if microstep == 1:
-                    control_word |= (1 << ALU_S1) | (1 << nIRD_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFL_LD) | (1 << nMPC_RST)
+                    control_word |= (1 << ALU_S1) | (1 << nIRD_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFLZN_LD) | (1 << nFLCV_LD) | (1 << nMPC_RST)
 
             elif base_opcode == 23:  # SHR A
                 if microstep == 1:
@@ -245,11 +248,11 @@ def gen_microcode():
 
             elif base_opcode == 25:  # CP A, reg
                 if microstep == 1:
-                    control_word |= (1 << ALU_S1) | (1 << ALU_CIN) | (1 << REG_OE) | (1 << nFL_LD) | (1 << nMPC_RST)
+                    control_word |= (1 << ALU_S1) | (1 << ALU_CIN) | (1 << REG_OE) | (1 << nFLZN_LD) | (1 << nFLCV_LD) | (1 << nMPC_RST)
 
             elif base_opcode == 26:  # CP A, imm
                 if microstep == 1:
-                    control_word |= (1 << ALU_S1) | (1 << ALU_CIN) | (1 << nIRD_OE) | (1 << nFL_LD) | (1 << nMPC_RST)
+                    control_word |= (1 << ALU_S1) | (1 << ALU_CIN) | (1 << nIRD_OE) | (1 << nFLZN_LD) | (1 << nFLCV_LD) | (1 << nMPC_RST)
 
             elif base_opcode == 27:  # JCC imm16
                 take_jump = check_condition(sub_opcode, z_flag, c_flag, n_flag, v_flag)
@@ -262,7 +265,7 @@ def gen_microcode():
 
                 elif microstep == 2:
                     if take_jump: # Read second word and store in Instruction Register
-                        control_word |= (1 << MEM_RD) | (1 << nIR_LD)
+                        control_word |= (1 << MEM_RD) | (1 << nIRH_LD) | (1 << nIRL_LD)
                     else: # Branch not taken: Skip High Byte and finish instruction (3 cycles total)
                          control_word |= (1 << PC_INC) | (1 << nMPC_RST)
 
@@ -283,7 +286,7 @@ def gen_microcode():
                     if microstep == 1: # load high byte into marh (and pc++ automatically)
                         control_word |= (1 << nIRD_OE) | (1 << nMARH_LD)
                     elif microstep == 2: # read second word and store in instruction register
-                        control_word |= (1 << MEM_RD) | (1 << nIR_LD)
+                        control_word |= (1 << MEM_RD) | (1 << nIRH_LD) | (1 << nIRL_LD)
                     elif microstep == 3: # load low byte into marl
                         control_word |= (1 << nIRD_OE) | (1 << nMARL_LD)
                     elif microstep == 4: # load destination from MAR into PC
@@ -292,7 +295,7 @@ def gen_microcode():
                     if microstep == 1: # load high byte into marh (and pc++ automatically)
                         control_word |= (1 << nIRD_OE) | (1 << nMARH_LD)
                     elif microstep == 2: # read second word and store in instruction register
-                        control_word |= (1 << MEM_RD) | (1 << nIR_LD)
+                        control_word |= (1 << MEM_RD) | (1 << nIRH_LD) | (1 << nIRL_LD)
                     elif microstep == 3: # load low byte into marl and pc++ (pc is now the return address)
                         control_word |= (1 << nIRD_OE) | (1 << nMARL_LD) | (1 << PC_INC)
                     elif microstep == 4: # push PCH
@@ -368,7 +371,7 @@ def gen_microcode():
                     if microstep == 1:
                         control_word |= (1 << PC_OE) | (1 << nSP_OE) | (1 << nSP_INC)
                     elif microstep == 2:
-                        control_word |= (1 << PC_OE) | (1 << nFL_LD) | (1 << FL_SEL) | (1 << nSP_OE) | (1 << MEM_RD) | (1 << nMPC_RST)
+                        control_word |= (1 << PC_OE) | (1 << nFLZN_LD) | (1 << nFLCV_LD) | (1 << FL_SEL) | (1 << nSP_OE) | (1 << MEM_RD) | (1 << nMPC_RST)
 
                 elif sub_opcode == 7: # HALT
                     # step 1 only does the pc++ (so the pc points to the next instruction)

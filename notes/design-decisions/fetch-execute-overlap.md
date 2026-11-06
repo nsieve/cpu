@@ -22,7 +22,7 @@ In the SFD-8, step 1 always does `PC_INC` together with the actual work of the i
 
 | Step | What it does                                    |
 | ---- | ----------------------------------------------- |
-| 0    | `MEM_RD`, `nIR_LD`: fetch the instruction        |
+| 0    | `MEM_RD`, `nIRH_LD`, `nIRL_LD`: fetch the instruction |
 | 1    | `PC_INC` + execute the instruction (+ `nMPC_RST`) |
 
 This works because the PC only changes on the clock edge at the end of step 1, so during the whole step it still holds the address of the current instruction, and the increment doesn't need any bus. Most instructions finish right there, so they take 2 cycles instead of 3.

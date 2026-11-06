@@ -36,13 +36,13 @@ In the end I went with the first option. A 74157 sits in front of the source dec
 | 0         | `[7:5]` (normal)     |
 | 1         | `[10:8]` (ST zp)     |
 
-`SRC_SEL` took the place of `nACC_OE` (it's bit 39 now, on the third EPROM), and the AND gate is gone, so the change doesn't cost any extra control bits. It's active-high, so every other instruction leaves it at 0 and behaves exactly as before.
+`SRC_SEL` took the place of `nACC_OE` (it's bit 41 now, on the third EPROM), and the AND gate is gone, so the change doesn't cost any extra control bits. It's active-high, so every other instruction leaves it at 0 and behaves exactly as before.
 
 In `ST Imm, REG`, the microcode activates `REG_OE` together with `SRC_SEL`, so the decoder enables the register written in `[10:8]`:
 
 | Cycle | Control bits                                                        |
 | ----- | ------------------------------------------------------------------- |
-| 0     | MEM_RD, nIR_LD                                                      |
+| 0     | MEM_RD, nIRH_LD, nIRL_LD                                            |
 | 1     | PC_INC, PC_OE, nIRA_OE, nHBA_OE, MEM_WR, REG_OE, SRC_SEL, nMPC_RST  |
 
 Now `LD Imm, REG` and `ST Imm, REG` have the same encoding: the register in `[10:8]` and the address in `[7:0]`.

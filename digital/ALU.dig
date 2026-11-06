@@ -2250,7 +2250,7 @@
       <elementAttributes>
         <entry>
           <string>Label</string>
-          <string>nSHR</string>
+          <string>nSHR_OE</string>
         </entry>
       </elementAttributes>
       <pos x="-260" y="960"/>

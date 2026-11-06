@@ -1,28 +1,57 @@
 Instruction register (IR.dig): two 74377 and two 74245.
-  - On the rising clock edge it loads ROM_IN when nIR_LD = 0.
+  - On the rising clock edge the high byte (the opcode) loads from ROM_IN when nIRH_LD = 0,
+    and the low byte when nIRL_LD = 0. A fetch sets both, LDT only nIRL_LD.
   - I15_11, I10_8 and I7_5 are its fields, always on.
   - nIRD_OE puts its low byte on the data bus (I0_7), nIRA_OE on the address bus (AB).
 
 ## load and fields
-ROM_IN nIR_LD nIRD_OE nIRA_OE CLK I15_11 I10_8 I7_5 I0_7 AB
+ROM_IN nIRH_LD nIRL_LD nIRD_OE nIRA_OE CLK I15_11 I10_8 I7_5 I0_7 AB
 # JZ 0x12xx: opcode 0x1B, cond 2
-0xDA12 0      1       1       C   0x1B   2     0    Z    Z
+0xDA12 0       0       1       1       C   0x1B   2     0    Z    Z
 # no load: it keeps it
-0x1234 1      1       1       C   0x1B   2     0    Z    Z
-0x1234 1      0       1       0   0x1B   2     0    0x12 Z
-0x1234 1      1       0       0   0x1B   2     0    Z    0x12
+0x1234 1       1       1       1       C   0x1B   2     0    Z    Z
+0x1234 1       1       0       1       0   0x1B   2     0    0x12 Z
+0x1234 1       1       1       0       0   0x1B   2     0    Z    0x12
 # ADD A, B: opcode 0x0C, Rsrc 1
-0x6020 0      0       0       C   0x0C   0     1    0x20 0x20
+0x6020 0       0       0       0       C   0x0C   0     1    0x20 0x20
+
+## only the low byte (LDT): the opcode doesn't change
+ROM_IN nIRH_LD nIRL_LD nIRD_OE nIRA_OE CLK I15_11 I10_8 I7_5 I0_7 AB
+# LDT A, XY: opcode 0xF8
+0xF812 0       0       0       1       C   0x1F   0     0    0x12 Z
+# a word with another high byte: only 0x41 goes in
+0x3C41 1       0       0       1       C   0x1F   0     2    0x41 Z
+
+## only the high byte: the low byte doesn't change
+ROM_IN nIRH_LD nIRL_LD nIRD_OE nIRA_OE CLK I15_11 I10_8 I7_5 I0_7 AB
+0x0041 0       0       0       1       C   0      0     2    0x41 Z
+0x3C99 0       1       0       1       C   7      4     2    0x41 Z
 
 ## every bit on its own
-ROM_IN nIR_LD nIRD_OE nIRA_OE CLK I15_11 I10_8 I7_5 I0_7 AB
+ROM_IN nIRH_LD nIRL_LD nIRD_OE nIRA_OE CLK I15_11 I10_8 I7_5 I0_7 AB
 loop(i, 16)
-(1<<i) 0      0       0       C   ((1<<i)>>11) (((1<<i)>>8)&7) (((1<<i)>>5)&7) ((1<<i)&255) ((1<<i)&255)
+(1<<i) 0       0       0       0       C   ((1<<i)>>11) (((1<<i)>>8)&7) (((1<<i)>>5)&7) ((1<<i)&255) ((1<<i)&255)
 end loop
 
 ## random words
-ROM_IN nIR_LD nIRD_OE nIRA_OE CLK I15_11 I10_8 I7_5 I0_7 AB
+ROM_IN nIRH_LD nIRL_LD nIRD_OE nIRA_OE CLK I15_11 I10_8 I7_5 I0_7 AB
 loop(i, 300)
 let w = random(65536);
-(w)    0      0       0       C   (w>>11) ((w>>8)&7) ((w>>5)&7) (w&255) (w&255)
+(w)    0       0       0       0       C   (w>>11) ((w>>8)&7) ((w>>5)&7) (w&255) (w&255)
+end loop
+
+## random words, only the low byte
+ROM_IN nIRH_LD nIRL_LD nIRD_OE nIRA_OE CLK I15_11 I10_8 I7_5 I0_7 AB
+0xF800 0       0       0       0       C   0x1F   0     0    0    0
+loop(i, 100)
+let w = random(65536);
+(w)    1       0       0       0       C   0x1F   0     ((w>>5)&7) (w&255) (w&255)
+end loop
+
+## random words, only the high byte
+ROM_IN nIRH_LD nIRL_LD nIRD_OE nIRA_OE CLK I15_11 I10_8 I7_5 I0_7 AB
+0x0041 0       0       0       0       C   0      0     2    0x41 0x41
+loop(i, 100)
+let w = random(65536);
+(w)    0       1       0       0       C   (w>>11) ((w>>8)&7) 2  0x41 0x41
 end loop

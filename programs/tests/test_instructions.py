@@ -72,6 +72,11 @@ def operand_cases(count=150, seed=1):
     return cases
 
 
+
+def flags_byte(flags):
+    """Z C N V (bits 0-3, like cpu.flags) -> the byte PUSHF writes: 0000VCNZ."""
+    return flags & 9 | (flags & 2) << 1 | (flags & 4) >> 1
+
 class TestMoves(unittest.TestCase):
     def test_mov_reg_imm(self):
         for i, r in enumerate(REGS):
@@ -215,9 +220,8 @@ class TestAlu(unittest.TestCase):
     def test_or(self): self.check_logic("OR", lambda a, b: a | b)
     def test_xor(self): self.check_logic("XOR", lambda a, b: a ^ b)
 
-    @unittest.expectedFailure
     def test_logic_ops_keep_c_and_v(self):
-        # issues.md: the 4 ALU flags are loaded together, so C and V get whatever the 74382 outputs
+        # the logic operations only load Z and N (nFLZN_LD), so C and V keep their value
         for op in ("AND", "OR", "XOR"):
             for a, b, _ in operand_cases(50):
                 for cv in (0, C | V):
@@ -349,14 +353,15 @@ class TestStack(unittest.TestCase):
         self.assertEqual(run("DEC SP", sp=0x0000).sp, 0xFFFF)
 
     def test_pushf(self):
+        # the pushed byte is 0000VCNZ (Z N C V in bits 0-3), while cpu.flags is Z C N V
         for flags in range(16):
             cpu = run("PUSHF", flags=flags, sp=0xBAFF)
-            self.assertEqual((cpu.ram[0xBAFF], cpu.sp), (flags, 0xBAFE))
+            self.assertEqual((cpu.ram[0xBAFF], cpu.sp), (flags_byte(flags), 0xBAFE))
 
     def test_popf(self):
         for flags in range(16):
-            cpu = run("POPF", sp=0xBAFE, ram={0xBAFF: flags})
-            self.assertEqual((cpu.flags, cpu.sp), (flags, 0xBAFF), f"POPF of {flags:04b}")
+            cpu = run("POPF", sp=0xBAFE, ram={0xBAFF: flags_byte(flags)})
+            self.assertEqual((cpu.flags, cpu.sp), (flags, 0xBAFF), f"POPF of {flags_byte(flags):04b}")
 
 
 if __name__ == "__main__":

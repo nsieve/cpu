@@ -1,24 +1,42 @@
-Status register (STATUS_REG.dig): a 74173 with a 74157 in front and a 74245 behind.
-  - On the rising clock edge it loads when nFL_LD = 0: the ALU flags if FL_SEL = 0, the low 4
-    bits of D_IN if FL_SEL = 1 (POPF).
-  - Z, C, N, V are always out. nFL_OE puts them on the data bus as 0000VNCZ (PUSHF).
+Status register (STATUS_REG.dig): two 74173 with a 74157 in front and a 74245 behind.
+  - On the rising clock edge Z and N load when nFLZN_LD = 0, and C and V when nFLCV_LD = 0:
+    the ALU flags if FL_SEL = 0, the low 4 bits of D_IN if FL_SEL = 1 (POPF).
+    Arithmetic and POPF load all 4, the logic operations only Z and N.
+  - Z, C, N, V are always out. nFL_OE puts them on the data bus as 0000VCNZ (PUSHF), so in the
+    loops below f is that byte: Z = bit 0, N = bit 1, C = bit 2, V = bit 3.
   - It has no reset (nRST isn't connected inside).
 
 ## load from the ALU
-D_IN Z_FLAG C_FLAG N_FLAG V_FLAG nFL_OE nFL_LD FL_SEL CLK nRST D_OUT Z C N V
+D_IN Z_FLAG C_FLAG N_FLAG V_FLAG nFL_OE nFLZN_LD nFLCV_LD FL_SEL CLK nRST D_OUT Z C N V
 loop(f, 16)
-0x00 (f&1) ((f>>1)&1) ((f>>2)&1) ((f>>3)&1) 0 0 0 C 1 (f) (f&1) ((f>>1)&1) ((f>>2)&1) ((f>>3)&1)
+0x00 (f&1) ((f>>2)&1) ((f>>1)&1) ((f>>3)&1) 0 0 0 0 C 1 (f) (f&1) ((f>>2)&1) ((f>>1)&1) ((f>>3)&1)
 end loop
 
 ## load from the data bus (only the low 4 bits)
-D_IN Z_FLAG C_FLAG N_FLAG V_FLAG nFL_OE nFL_LD FL_SEL CLK nRST D_OUT Z C N V
+D_IN Z_FLAG C_FLAG N_FLAG V_FLAG nFL_OE nFLZN_LD nFLCV_LD FL_SEL CLK nRST D_OUT Z C N V
 loop(f, 16)
-(0xA0|f) ((f&1)^1) 0 1 0 0 0 1 C 1 (f) (f&1) ((f>>1)&1) ((f>>2)&1) ((f>>3)&1)
+(0xA0|f) ((f&1)^1) 0 1 0 0 0 0 1 C 1 (f) (f&1) ((f>>2)&1) ((f>>1)&1) ((f>>3)&1)
 end loop
 
-## it keeps the flags without nFL_LD, and the data bus output turns off
-D_IN Z_FLAG C_FLAG N_FLAG V_FLAG nFL_OE nFL_LD FL_SEL CLK nRST D_OUT Z C N V
-0x00 1      0      1      0      0      0      0      C   1    0x05  1 0 1 0
-0x00 0      1      0      1      0      1      0      C   1    0x05  1 0 1 0
-0x0F 0      1      0      1      0      1      1      C   1    0x05  1 0 1 0
-0x00 0      1      0      1      1      1      0      0   1    Z     1 0 1 0
+## only Z and N (logic operations): C and V keep their value
+D_IN Z_FLAG C_FLAG N_FLAG V_FLAG nFL_OE nFLZN_LD nFLCV_LD FL_SEL CLK nRST D_OUT Z C N V
+# C = 1 and V = 1 first
+0x00 0      1      0      1      0      0        0        0      C   1    0x0C  0 1 0 1
+loop(f, 4)
+0x00 (f&1) 0 ((f>>1)&1) 0 0 0 1 0 C 1 (0x0C|f) (f&1) 1 ((f>>1)&1) 1
+end loop
+
+## only C and V: Z and N keep their value
+D_IN Z_FLAG C_FLAG N_FLAG V_FLAG nFL_OE nFLZN_LD nFLCV_LD FL_SEL CLK nRST D_OUT Z C N V
+# Z = 1 and N = 1 first
+0x00 1      0      1      0      0      0        0        0      C   1    0x03  1 0 1 0
+loop(f, 4)
+0x00 0 (f&1) 0 ((f>>1)&1) 0 1 0 0 C 1 (0x03|(f<<2)) 1 (f&1) 1 ((f>>1)&1)
+end loop
+
+## it keeps the flags without a load, and the data bus output turns off
+D_IN Z_FLAG C_FLAG N_FLAG V_FLAG nFL_OE nFLZN_LD nFLCV_LD FL_SEL CLK nRST D_OUT Z C N V
+0x00 1      0      1      0      0      0        0        0      C   1    0x03  1 0 1 0
+0x00 0      1      0      1      0      1        1        0      C   1    0x03  1 0 1 0
+0x0F 0      1      0      1      0      1        1        1      C   1    0x03  1 0 1 0
+0x00 0      1      0      1      1      1        1        0      0   1    Z     1 0 1 0

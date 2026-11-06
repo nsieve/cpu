@@ -6,7 +6,6 @@ Everything left before the SFD-8 is done for now, so that the only things left a
 
 These can still change the hardware, so they go first.
 
-- reading constants from the ROM (fonts, images, the QR code): right now the ROM only goes to the IR. The `LDT A, XY` idea in `ideas.md` does it with no new hardware. Decide before the instruction set is frozen
 - the other ISA ideas in `ideas.md`: ALU operations with an immediate, and `ST XY+, REG`
 - the real keyboard interface (PS/2?). In Digital it's Digital's own keyboard component
 - SPI: the hardware shifter (74HC165 + 74HC161 + some gates) or keep bit-banging
@@ -20,7 +19,6 @@ These can still change the hardware, so they go first.
 
 In Digital.
 
-- fix `ROR` (it does the same as `SHR`) and the C and V flags that `AND`/`OR`/`XOR` load (see `issues.md`)
 - map the 7 generic gates in `CPU.dig`, `MAR.dig` and `SP.dig` to real chips
 - add whatever the decisions add (keyboard, SPI shifter, timer)
 - draw the clock (the three 555s) as a schematic
@@ -28,7 +26,9 @@ In Digital.
 ## Software
 
 - binary files for a real programmer: one per EPROM for the microcode, and the program split into a high-byte and a low-byte file for the two AT28C256 (right now everything is in Digital's hex format)
-- update the microcode, assembler, emulator and tests for any new instructions or I/O
+- `ROR` in the microcode: set `SHR_IN0` only when C = 1, so it does A = {C, A[7:1]} like `isa.md` says
+- `LDT A, XY` (`0x1F` sub-op 0): the microcode (step 1 loads only the IR's low byte from the ROM at XY, step 2 puts it in A), a `.TABLE` directive in the assembler, and the emulator and tests
+- update the microcode, assembler, emulator and tests for any other new instructions or I/O
 - more complex pseudoinstructions (maybe split into single-instruction and multi-instruction ones)
 
 ## Docs
@@ -40,6 +40,7 @@ In Digital.
 - check the AND row of the ALU core table (it says S = 110 now, which is what the microcode does)
 - a block diagram of the register file (if possible)
 - new docs: the MMIO, the clock, and whatever the decisions add
+- `instregister.md` and `statreg.md` with the split loads (and in `statreg.md`, the pushed byte is now `0000VCNZ`, C and N swapped compared to the microcode address), and a design-decisions doc for `LDT` and the split IR load (why the opcode can't change in the middle of an instruction)
 - design-decisions docs for past changes:
 	- the memory map: RAM first (for the zero page) instead of ROM first, and the address decoder redesign
 	- the power-on race conditions

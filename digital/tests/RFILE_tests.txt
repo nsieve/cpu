@@ -5,12 +5,12 @@ Register file (RFILE.dig): B-F (two 74173 each), X and Y (two 74191 each, a 16-b
   - REG_OE_EN puts the register in B_7_5 (Rsrc) on DB_OUT, or the one in B_10_8 with SRC_SEL = 1.
     For register 0 it only pulls A_OE low.
   - With nXY_INC = 0 the XY pair counts on the rising clock edge (up if XY_DIR = 0, down if 1),
-    and nXY_AOE puts it on the address bus (AB_OUT).
+    and nXYA_OE puts it on the address bus (AB_OUT).
   - RST clears B-F (X and Y have no reset).
 DB_IN only changes while no load is on (see MAR_tests.txt).
 
 ## store and read every register
-DB_IN B_10_8 B_7_5 REG_LD_EN REG_OE_EN nXY_INC XY_DIR nXY_AOE SRC_SEL CLK RST DB_OUT AB_OUT A_LD A_OE
+DB_IN B_10_8 B_7_5 REG_LD_EN REG_OE_EN nXY_INC XY_DIR nXYA_OE SRC_SEL CLK RST DB_OUT AB_OUT A_LD A_OE
 0x00  0      0     0         0         1       0      1       0       0   0   Z      Z      1    1
 0x11  1      0     1         0         1       0      1       0       C   0   Z      Z      1    1
 0x11  1      0     0         0         1       0      1       0       0   0   Z      Z      1    1
@@ -46,7 +46,7 @@ DB_IN B_10_8 B_7_5 REG_LD_EN REG_OE_EN nXY_INC XY_DIR nXY_AOE SRC_SEL CLK RST DB
 0x00  0      2     0         1         1       0      1       0       0   0   0x22   Z      1    1
 
 ## A_LD and A_OE
-DB_IN B_10_8 B_7_5 REG_LD_EN REG_OE_EN nXY_INC XY_DIR nXY_AOE SRC_SEL CLK RST DB_OUT AB_OUT A_LD A_OE
+DB_IN B_10_8 B_7_5 REG_LD_EN REG_OE_EN nXY_INC XY_DIR nXYA_OE SRC_SEL CLK RST DB_OUT AB_OUT A_LD A_OE
 loop(r, 8)
 0x00  (r)    0     1         0         1       0      1       0       0   0   X      X      (ite(r=0,0,1)) 1
 0x00  (r)    0     0         0         1       0      1       0       0   0   X      X      1    1
@@ -54,7 +54,7 @@ loop(r, 8)
 end loop
 
 ## XY counts as one 16-bit register
-DB_IN B_10_8 B_7_5 REG_LD_EN REG_OE_EN nXY_INC XY_DIR nXY_AOE SRC_SEL CLK RST DB_OUT AB_OUT A_LD A_OE
+DB_IN B_10_8 B_7_5 REG_LD_EN REG_OE_EN nXY_INC XY_DIR nXYA_OE SRC_SEL CLK RST DB_OUT AB_OUT A_LD A_OE
 0x12  0      0     0         0         1       0      0       0       0   0   X      X      1    1
 0x12  6      0     1         0         1       0      0       0       C   0   X      X      1    1
 0x12  6      0     0         0         1       0      0       0       0   0   X      X      1    1
@@ -76,7 +76,7 @@ repeat(600) 0xFF 0 0 0 0 0 1 0 0 C 0 X (0x1555-n) 1 1
 0xFF  0      0     0         0         0       1      0       0       C   0   X      0xFFFF 1    1
 
 ## RST clears B-F but not X and Y
-DB_IN B_10_8 B_7_5 REG_LD_EN REG_OE_EN nXY_INC XY_DIR nXY_AOE SRC_SEL CLK RST DB_OUT AB_OUT A_LD A_OE
+DB_IN B_10_8 B_7_5 REG_LD_EN REG_OE_EN nXY_INC XY_DIR nXYA_OE SRC_SEL CLK RST DB_OUT AB_OUT A_LD A_OE
 0x5A  1      0     1         0         1       0      1       0       C   0   X      X      1    1
 0x5A  1      0     0         0         1       0      1       0       0   0   X      X      1    1
 0x5A  5      0     1         0         1       0      1       0       C   0   X      X      1    1

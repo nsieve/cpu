@@ -29,7 +29,7 @@ The 3 EPROMs share the same 16-bit address, and each one outputs 16 control bits
 | -------- | ----- | --------------------------------------- |
 | `C0-15`  | 1ROM  | control bits 0-15                       |
 | `C16-31` | 2ROM  | control bits 16-31                      |
-| `C32-47` | 3ROM  | control bits 32-40 (41-47 are unused)   |
+| `C32-47` | 3ROM  | control bits 32-42 (43-47 are unused)   |
 
 16 address bits means 64K words per EPROM. Most of them are never used, but the programmer writes every address anyway, so there's nothing undefined in them.
 
@@ -52,7 +52,7 @@ During reset, the Control Unit does two things (more about this in `reset.md`):
 
 Every instruction goes through the same loop:
 
-1. Step 0 is the fetch (`MEM_RD`, `nIR_LD`). It's the same for every opcode, which matters, because during step 0 the IR still holds the previous instruction, so the EPROMs are still being addressed with the old opcode. The new instruction is loaded into the IR on the clock edge at the end of the step.
+1. Step 0 is the fetch (`MEM_RD`, `nIRH_LD`, `nIRL_LD`). It's the same for every opcode, which matters, because during step 0 the IR still holds the previous instruction, so the EPROMs are still being addressed with the old opcode. The new instruction is loaded into the IR on the clock edge at the end of the step.
 2. From step 1 on, the EPROMs see the new opcode, and they output the control bits of that instruction for each step. Step 1 always does `PC_INC` too (see `design-decisions/fetch-execute-overlap.md`).
 3. The last step activates `nMPC_RST`, and the micro-PC goes back to 0.
 
@@ -69,7 +69,7 @@ The flags come straight from the status register, so when an instruction changes
 
 | Step | Control bits       | What happens                                           |
 | ---- | ------------------ | ------------------------------------------------------ |
-| 0    | `MEM_RD`, `nIR_LD` | normal fetch                                           |
+| 0    | `MEM_RD`, `nIRH_LD`, `nIRL_LD` | normal fetch                               |
 | 1    | `PC_INC`           | normal overlap, the PC points to the next instruction  |
 | 2    | `nHALT`            | the micro-PC stays here, and nothing else is active    |
 
@@ -93,7 +93,7 @@ It also fits how the instruction set was designed. The instruction set changed a
 
 ### Why 3 EPROMs
 
-The CPU needs 41 control bits. Each EPROM outputs 16, so 2 would only give 32, and 3 give 48, leaving 7 free bits for the future.
+The CPU needs 43 control bits. Each EPROM outputs 16, so 2 would only give 32, and 3 give 48, leaving 5 free bits for the future.
 
 ## Physical TTL Mapping
 

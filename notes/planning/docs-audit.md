@@ -22,8 +22,6 @@ These are the ones worth fixing next, because they say something the CPU doesn't
 - `alu.md`: ROR's bit 7 is `SHR_IN0` (a control bit), not the C flag, and the accumulator has 2 output buffers, not 3. The same wrong `SHR_IN0` description is in `crom_programmer.py`, so it's in `controlbits.md` too.
 - `instructiondecoding.md`: the table still has the examples from before the redesign (`ADD R1, R2` with any destination, `INC R1`, `PUSH` with Rdst, 1-word `JZ 0x80`).
 
-The old memory map is still in the comments of `crom_programmer.py` (the framebuffer chip select).
-
 Fine as they are: `isa.md` (the tests check the table), the two generated docs, `instregister.md`, `controlunit.md`, `address_buffers.md`, `address_decoder.md`, `memory_map.md`, `interrupts.md` and `instruction-set-redesign.md`. `st-zeropage.md` and `fetch-execute-overlap.md` only have a syntax detail each.
 
 Verification is missing from every module doc, but that one's easy now: each module has a test file in `digital/tests/`.
@@ -34,7 +32,7 @@ Verification is missing from every module doc, but that one's easy now: each mod
 | ---- | ----- | ------- | ------------------ | --- |
 | Outdated | Highlights | 77 logic chips so far | The simulation has 80 74xx chips (whole chips per module, plus 7 generic gates). The real count, with gates shared between modules, will be lower | update the number, or say it's the simulation count |
 
-Checked and right: 32 opcodes and 66 instructions (the `isa.md` table), 41 control bits, up to 16 steps, most instructions in 2 cycles, the description of the fetch and the address bus sources, and the Running It steps (`gen_docs.py` does warn about `isa.md`, and the generated docs are up to date).
+Checked and right: 32 opcodes and 66 instructions (the `isa.md` table), 43 control bits, up to 16 steps, most instructions in 2 cycles, the description of the fetch and the address bus sources, and the Running It steps (`gen_docs.py` does warn about `isa.md`, and the generated docs are up to date).
 
 ## Hardware Design
 
@@ -55,7 +53,7 @@ Fixed today, it matches `ADDR_DEC.dig` (the 3 equations, gate 3 of the 7400 free
 | Kind | Where | It says | The circuit / code | Fix |
 | ---- | ----- | ------- | ------------------ | --- |
 | Wrong | Overview, last bullet | the accumulator goes to 3 buffers: normal output, shift right, and roll right through carry | There are 2 buffers from the accumulator: A itself (`A_OE`) and the shifter (`nSHR`). The third 74245 is the ALU result (`nALU_OE`). There's no separate ROR buffer | "2 buffers from A (normal and shifted right) and one for the ALU result" |
-| Wrong | Datapath Routing, ROR row | Shift MUX (D7) driven to `C_FLAG` | Bit 7 of the shifter is `SHR_IN0`, a control bit (bit 29), not the C flag | "driven by `SHR_IN0`". A ROR through carry can still be done in microcode only: the microcode address has C, so ROR can set `SHR_IN0` only when C = 1. The shifted-out bit going into C would need hardware, though |
+| Wrong | Datapath Routing, ROR row | Shift MUX (D7) driven to `C_FLAG` | Bit 7 of the shifter is `SHR_IN0`, a control bit (bit 30), not the C flag | "driven by `SHR_IN0`". A ROR through carry can still be done in microcode only: the microcode address has C, so ROR can set `SHR_IN0` only when C = 1. The shifted-out bit going into C would need hardware, though |
 | Outdated | 74382 table | ADI, CPI, ANI | The ISA calls them `ADD A, Imm`, `CP A, Imm`, `AND A, Imm` (old mnemonics) | rename |
 | Unclear | 74382 table | Cin = X for AND/OR/XOR | The microcode leaves `ALU_CIN` at 0. It doesn't change the result, but it does change the C and V that get loaded | "0" |
 | Unclear | Datapath Routing, INC/DEC row | B-input source: force 0 | Nothing forces it: the IR puts its low byte on the data bus (`nIRD_OE`), and the assembler leaves it at `0x00` (`issues.md` has it as a limitation) | "the IR's low byte (0x00)" |
@@ -111,13 +109,13 @@ Everything matches `IR.dig` (2 74377, 2 74245, the fields and the signals). Miss
 
 | Kind | Where | It says | The circuit / code | Fix |
 | ---- | ----- | ------- | ------------------ | --- |
-| Missing | Overview | the flags take the lower 4 bits of the pushed byte | The order: bit 0 Z, bit 1 C, bit 2 N, bit 3 V (the same order as the microcode address bits 12-15) | add it |
+| Missing | Overview | the flags take the lower 4 bits of the pushed byte | The order: bit 0 Z, bit 1 N, bit 2 C, bit 3 V (`0000VCNZ`). It's not the order of the microcode address (Z C N V in bits 12-15): the status register swaps C and N so each 74173 holds two neighbouring bits | add it, and the split into two 74173 |
 | Missing | Hardware | - | The 74173's reset is grounded, so the flags have no reset (they power up random), and the `nRST` pin of the module isn't connected to anything inside | add it |
 | Missing | whole doc | - | A chip table (74157, 74173, 74245) | template section 6 |
 
 ### reset.md
 
-Everything else matches: the 7474 synchronizer (the module test checks the press, the hold, the release and a short press), the PC gates, the control unit, and the table of inactive EPROM words (`0xF3FA`, `0xD428`, `0x017A` are exactly `active_low_mask`).
+Everything else matches: the 7474 synchronizer (the module test checks the press, the hold, the release and a short press), the PC gates, the control unit, and the table of inactive EPROM words (`0x2FFA`, `0xA878`, `0x05EB` are exactly `active_low_mask`).
 
 | Kind | Where | It says | The circuit / code | Fix |
 | ---- | ----- | ------- | ------------------ | --- |
@@ -146,13 +144,11 @@ The table is checked by `programs/tests/test_microcode.py`: every opcode slot is
 
 ### controlbits.md
 
-Generated, and up to date (`gen_docs.py` makes the same file, with no warnings). But it takes the descriptions from the comments in `crom_programmer.py`, and some of those are off:
+Generated, and up to date (`gen_docs.py` makes the same file, with no warnings). But it takes the descriptions from the comments in `crom_programmer.py`, and one of them is off:
 
 | Kind | Bit | It says | The circuit | Fix (in `crom_programmer.py`, then `gen_docs.py`) |
 | ---- | --- | ------- | ----------- | --- |
-| Wrong | `SHR_IN0` (29) | bit 0 of the shr buffer; 0 = SHR, 1 = ROR | It goes into bit 7 of the shifted value (the last input of the shifter's 74245). A 1 there just sets bit 7, it doesn't make a rotate through carry | "bit 7 of the shifted value (0 for SHR)" |
-| Outdated | `MEM_RD` (10), `MEM_WR` (11) | ROM/RAM/FB/MMIO | There's no framebuffer chip select anymore | drop FB |
-| Outdated | `FL_SEL` (32) | (only first 4 flags) | There are only 4 flags since I and B were removed | drop it |
+| Wrong | `SHR_IN0` (30) | bit 0 of the shr buffer; 0 = SHR, 1 = ROR | It goes into bit 7 of the shifted value (the last input of the shifter's 74245). A 1 there just sets bit 7, it doesn't make a rotate through carry | "bit 7 of the shifted value (0 for SHR)" |
 
 ### instructionset_extended.md
 
@@ -160,7 +156,7 @@ Generated, and up to date.
 
 ## Design Decisions
 
-`instruction-set-redesign.md`, `interrupts.md` and `st-zeropage.md` match the circuits and the microcode (the `ST zp` microcode table is exactly what `crom_programmer.py` does, and `SRC_SEL` is bit 39). The rest:
+`instruction-set-redesign.md`, `interrupts.md` and `st-zeropage.md` match the circuits and the microcode (the `ST zp` microcode table is exactly what `crom_programmer.py` does, and `SRC_SEL` is bit 41). The rest:
 
 ### 74191-loadsync.md
 

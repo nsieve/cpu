@@ -68,9 +68,9 @@ The pull resistors are needed because otherwise the control lines would float an
 
 | EPROM | Inactive word | Pull-down bits          | Pull-up bits             |
 | ----- | ------------- | ----------------------- | ------------------------ |
-| 1     | `0xF3FA`      | 0, 2, 10-11             | 1, 3-9, 12-15            |
-| 2     | `0xD428`      | 0-2, 4, 6-9, 11, 13     | 3, 5, 10, 12, 14-15      |
-| 3     | `0x017A`      | 0, 2, 7, 9-15 (unused)  | 1, 3-6, 8 (`nHALT`)      |
+| 1     | `0x2FFA`      | 0, 2, 12, 14-15         | 1, 3-11, 13              |
+| 2     | `0xA878`      | 0-2, 7-10, 12, 14       | 3-6, 11, 13, 15          |
+| 3     | `0x05EB`      | 2, 4, 9, 11-15 (unused) | 0-1, 3, 5-8, 10 (`nHALT`) |
 
 ## Timing
 
@@ -93,7 +93,7 @@ At first, the PC used 2 XOR gates: `nPC_LD` XOR `RST` and `PC_OE` XOR `RST`. It 
 
 The micro-PC's clear is synchronous, so in the first cycle of the reset, the micro-PC is still in whatever step the CPU was in when I pressed the button, and the EPROMs keep outputting that step. If that step had something else driving the address bus (the MAR, XY, the SP or the zero page), it would short with the Reset Buffer. In the simulation this gave a random error, depending on which instruction was running when I pressed reset.
 
-Turning off the EPROMs during the reset means no control bit can be active, from the very first cycle. It also protects the RAM, since `MEM_WR` can't be active either. The cost is the pull resistors on the 41 control lines.
+Turning off the EPROMs during the reset means no control bit can be active, from the very first cycle. It also protects the RAM, since `MEM_WR` can't be active either. The cost is the pull resistors on the 43 control lines.
 
 ### Why Synchronize the Button
 

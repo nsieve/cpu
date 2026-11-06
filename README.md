@@ -13,7 +13,7 @@ An 8-bit CPU designed from scratch and built entirely from 74HC logic chips.
 - 8-bit data bus, 16-bit address bus (64 KB of memory)
 - Von Neumann, accumulator-based architecture
 - 32 opcodes that expand to 66 instructions using sub-opcodes
-- Microprogrammed control unit: 41 control bits on three 16-bit EPROMs, up to 16 microsteps per instruction
+- Microprogrammed control unit: 43 control bits on three 16-bit EPROMs, up to 16 microsteps per instruction
 - Most instructions take 2 cycles, because the fetch of the next instruction overlaps with the execution of the current one
 - 47.75 KB of RAM (1 KB of it for the framebuffer), 16 KB of ROM and 256 bytes of memory-mapped I/O
 - I/O: keyboard, 8 LEDs and an SPI port (a MAX7219 7-segment display for now, an OLED later)
@@ -69,7 +69,7 @@ Instruction set:
 
 - [Instruction Set Architecture](notes/opcodes%26microinstructions/isa.md): every instruction, its opcode, cycles and flags
 - [Instruction Decoding](notes/opcodes%26microinstructions/instructiondecoding.md): how the 16-bit instruction word is split
-- [Control Bits](notes/opcodes%26microinstructions/controlbits.md): what each of the 41 control bits does (generated)
+- [Control Bits](notes/opcodes%26microinstructions/controlbits.md): what each of the 43 control bits does (generated)
 - [Instruction Set (Extended)](notes/opcodes%26microinstructions/instructionset_extended.md): the control bits of every instruction in every microstep (generated)
 - [Memory Map](notes/hardware-design/memory_map.md)
 

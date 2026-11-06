@@ -29,10 +29,10 @@ Cycles count every microstep, including the fetch (step 0).
 | ADC A, REG    |  0x0E  |   -   |             A <-- A + Rs + C             | Z,C,N,V |   2    |
 | SUB A, REG    |  0x0F  |   -   |               A <-- A - Rs               | Z,C,N,V |   2    |
 | SBC A, REG    |  0x10  |   -   |           A <-- A - Rs - 1 + C           | Z,C,N,V |   2    |
-| AND A, REG    |  0x11  |   -   |               A <-- A & Rs               |  Z,N*   |   2    |
-| AND A, Imm    |  0x12  |   -   |              A <-- A & Imm               |  Z,N*   |   2    |
-| OR A, REG     |  0x13  |   -   |              A <-- A \| Rs               |  Z,N*   |   2    |
-| XOR A, REG    |  0x14  |   -   |              A <-- A (+) Rs              |  Z,N*   |   2    |
+| AND A, REG    |  0x11  |   -   |               A <-- A & Rs               |   Z,N   |   2    |
+| AND A, Imm    |  0x12  |   -   |              A <-- A & Imm               |   Z,N   |   2    |
+| OR A, REG     |  0x13  |   -   |              A <-- A \| Rs               |   Z,N   |   2    |
+| XOR A, REG    |  0x14  |   -   |              A <-- A (+) Rs              |   Z,N   |   2    |
 | INC A         |  0x15  |   -   |               A <-- A + 1                | Z,C,N,V |   2    |
 | DEC A         |  0x16  |   -   |               A <-- A - 1                | Z,C,N,V |   2    |
 | SHR A         |  0x17  |   -   |            A <-- {0, A[7:1]}             |    -    |   2    |
@@ -83,12 +83,13 @@ Cycles count every microstep, including the fetch (step 0).
 - ST Imm and LD Imm keep the register in bits `[10:8]`, because the whole lower byte is the zero-page address. For the store, the control bit `SRC_SEL` makes the source decoder read the register from `[10:8]` instead of `[7:5]`. More about this in `design-decisions/st-zeropage.md`.
 - CP does the same as SUB, but only updates the flags, A is not written.
 - HALT freezes the micro-PC in step 2 with `nHALT`, after the PC already points to the next instruction. The CPU stays there until a reset. More about this in `hardware-design/controlunit.md`.
+- AND / OR / XOR only load Z and N (`nFLZN_LD`), so C and V keep the value they had.
+- PUSHF / POPF: the flags byte on the stack is `0000VCNZ` (Z in bit 0, N in bit 1, C in bit 2, V in bit 3).
 - INC A / DEC A don't use the carry, they force the carry-in: INC A is A + 0 + 1, and DEC A is A - 0 - 1.
 - Free slots: 0x02 subOp 6-7, 0x03 subOp 2-7, 0x1D subOp 6-7, 0x1E subOp 5 and 0x1F subOp 0, 2, 3, 4 (these last four were the interrupt instructions). If one gets executed, it works as a NOP: 2 cycles, and nothing changes except the PC.
 
 ### Known Issues (*)
 
-- AND / OR / XOR: the 4 ALU flags are loaded together, so C and V also get loaded with whatever the 74382 outputs on a logic operation. Only Z and N are meaningful.
 - ROR: right now its microcode is exactly the same as SHR (`SHR_IN0` is never set), and shifts don't update the flags, so the bit shifted out doesn't go into C.
 
 The full list of open problems is in `planning/issues.md`.

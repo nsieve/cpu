@@ -228,6 +228,8 @@ ADDR_FULL = {"PC": "c.pc", "MAR": "c.mar", "SP": "c.sp", "XY": "c.r[6] << 8 | c.
 def gen_step(cw):
     """Returns (source, description, problems) for one control word (active-high)."""
     on = lambda bit: cw >> bit & 1 == 1
+    ir_ld = on(cp.nIRH_LD) or on(cp.nIRL_LD)
+    fl_mask = (0b0101 if on(cp.nFLZN_LD) else 0) | (0b1010 if on(cp.nFLCV_LD) else 0)   # flags are Z C N V in bits 0-3
     code = ["ir = c.ir"]
     desc = []
     problems = []
@@ -245,7 +247,7 @@ def gen_step(cw):
         high.append("0x00")
     if len(low) > 1 or len(high) > 1:
         problems.append(f"the address bus is driven by {' and '.join(dict.fromkeys(low + high))} at once")
-    addr_used = on(cp.MEM_RD) or on(cp.MEM_WR) or on(cp.nPC_LD) or on(cp.nSP_LD) or on(cp.nIR_LD)
+    addr_used = on(cp.MEM_RD) or on(cp.MEM_WR) or on(cp.nPC_LD) or on(cp.nSP_LD) or ir_ld
     if low and high:
         if low[0] == high[0]:
             code.append(f"abus = {ADDR_FULL[low[0]]}")
@@ -274,7 +276,9 @@ def gen_step(cw):
     if on(cp.nSHR_OE):
         bit7 = 0x80 if on(cp.SHR_IN0) else 0
         drivers.append((f"A >> 1 (bit 7 = {1 if bit7 else 0})", f"c.r[0] >> 1 | {bit7}"))
-    if on(cp.nFL_OE): drivers.append(("flags", "c.flags"))
+    # the status register puts the flags on the data bus as 0000VCNZ (Z N C V in bits 0-3), but they are
+    # Z C N V in the microcode address and in c.flags, so C and N swap places between the two
+    if on(cp.nFL_OE): drivers.append(("flags", "(c.flags & 9 | (c.flags & 2) << 1 | (c.flags & 4) >> 1)"))
     if on(cp.nSPL_OE): drivers.append(("SPL", "c.sp & 0xFF"))
     if on(cp.nSPH_OE): drivers.append(("SPH", "c.sp >> 8"))
     if on(cp.nALU_OE):
@@ -282,9 +286,9 @@ def gen_step(cw):
     if len(drivers) > 1:
         problems.append(f"the data bus is driven by {' and '.join(d for d, _ in drivers)} at once")
 
-    alu_used = (on(cp.REG_LD) and on(cp.A_SEL)) or (on(cp.nFL_LD) and not on(cp.FL_SEL))
+    alu_used = (on(cp.REG_LD) and on(cp.A_SEL)) or (fl_mask and not on(cp.FL_SEL))
     data_used = (on(cp.REG_LD) or on(cp.nMARL_LD) or on(cp.nMARH_LD) or on(cp.MEM_WR)
-                 or (on(cp.nFL_LD) and on(cp.FL_SEL)) or alu_used)
+                 or (fl_mask and on(cp.FL_SEL)) or alu_used)
     if on(cp.MEM_RD):
         if drivers:
             code.append("m = c.mem_read(abus)")
@@ -322,11 +326,18 @@ def gen_step(cw):
     if on(cp.MEM_WR):
         code.append("c.mem_write(abus, dbus)")
         desc.append("mem[address] <- data")
-    if on(cp.nIR_LD):
+    if ir_ld:
         if not on(cp.MEM_RD):
-            problems.append("nIR_LD without MEM_RD: the ROM outputs are off")
-        code.append("c.ir = c.rom_read(abus)")
-        desc.append("IR <- ROM[address]")
+            problems.append("an IR load without MEM_RD: the ROM outputs are off")
+        if on(cp.nIRH_LD) and on(cp.nIRL_LD):
+            code.append("c.ir = c.rom_read(abus)")
+            desc.append("IR <- ROM[address]")
+        elif on(cp.nIRL_LD):
+            code.append("c.ir = ir & 0xFF00 | c.rom_read(abus) & 0xFF")
+            desc.append("IR[7:0] <- ROM[address][7:0]")
+        else:
+            code.append("c.ir = c.rom_read(abus) & 0xFF00 | ir & 0xFF")
+            desc.append("IR[15:8] <- ROM[address][15:8]")
     if on(cp.nPC_LD):
         code.append("c.pc = abus")
         desc.append("PC <- address bus")
@@ -378,13 +389,14 @@ def gen_step(cw):
         code.append(f"c.sp = (c.sp {sign} 1) & 0xFFFF")
         desc.append(f"SP <- SP {sign} 1")
 
-    if on(cp.nFL_LD):
-        if on(cp.FL_SEL):
-            code.append("c.flags = dbus & 15")
-            desc.append("flags <- data[3:0]")
+    if fl_mask:
+        loaded = " ".join(f for i, f in enumerate("ZCNV") if fl_mask >> i & 1)
+        src = "(dbus & 9 | (dbus & 2) << 1 | (dbus & 4) >> 1)" if on(cp.FL_SEL) else "alufl"
+        if fl_mask == 15:
+            code.append(f"c.flags = {src} & 15")
         else:
-            code.append("c.flags = alufl")
-            desc.append("flags <- ALU (Z C N V)")
+            code.append(f"c.flags = c.flags & {15 ^ fl_mask} | {src} & {fl_mask}")
+        desc.append(f"flags ({loaded}) <- " + ("data" if on(cp.FL_SEL) else "ALU"))
 
     if on(cp.MEM_RD):
         code.append("if c.kb_read: c.kb_consume()")

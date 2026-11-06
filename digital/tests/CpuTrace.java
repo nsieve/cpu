@@ -30,6 +30,10 @@ import java.util.*;
 // check_cpu.py compiles and runs this, and compares it with the emulator.
 public class CpuTrace {
     static final Map<String, ObservableValue> values = new HashMap<>();
+    // the IR's bits, when IR.dig has no I0-I15 tunnels: the Q of the flip-flop whose D comes from
+    // that bit of the ROM IN splitter, through the gates of the 74377's load enable (found by
+    // following the wires, so it doesn't depend on the layout)
+    static final ObservableValue[] irBits = new ObservableValue[16];
 
     static void remember(String key, ObservableValue v) {
         if (v != null) values.putIfAbsent(key, v);
@@ -42,6 +46,16 @@ public class CpuTrace {
     }
 
     // a value made of single-bit tunnels: name0, name1, ...
+    static long irValue() {
+        if (values.containsKey("IR.dig:I0")) return bits("IR.dig", "I", 16);
+        long v = 0;
+        for (int i = 0; i < 16; i++) {
+            if (irBits[i] == null) throw new RuntimeException("IR bit " + i + " not found in CPU.dig");
+            v |= (irBits[i].getValue() & 1) << i;
+        }
+        return v;
+    }
+
     static long bits(String module, String prefix, int count) {
         long v = 0;
         for (int i = 0; i < count; i++)
@@ -67,6 +81,9 @@ public class CpuTrace {
         Model m = mc.createModel(false);
 
         // every tunnel, splitter pin and register output, by module: "ALU.dig:AO3"
+        ObservableValue[] romIn = new ObservableValue[16];
+        List<ModelEntry> irFlipFlops = new ArrayList<>();
+        Map<ObservableValue, ModelEntry> irGateOutputs = new IdentityHashMap<>();
         for (ModelEntry e : mc) {
             VisualElement ve = e.getVisualElement(), cve = e.getContainingVisualElement();
             String module = cve == ve ? "TOP" : cve.getElementName();
@@ -80,6 +97,38 @@ public class CpuTrace {
             if (name.equals("Register"))
                 for (Pin p : e.getPins())
                     if (p.getName().equals("Q")) remember(module + ":register@" + pos, p.getValue());
+            if (module.equals("IR.dig") && name.equals("Splitter")) {
+                Map<String, ObservableValue> pins = new HashMap<>();
+                for (Pin p : e.getPins()) pins.put(p.getName(), p.getValue());
+                if (pins.containsKey("0-15") && pins.containsKey("15"))      // ROM IN, split into 16 bits
+                    for (int i = 0; i < 16; i++) romIn[i] = pins.get(String.valueOf(i));
+            }
+            if (module.equals("IR.dig") && name.equals("D_FF")) irFlipFlops.add(e);
+            if (module.equals("IR.dig") && (name.equals("And") || name.equals("Or") || name.equals("Not")))
+                for (Pin p : e.getPins())
+                    if (p.getDirection() == de.neemann.digital.core.element.PinDescription.Direction.output)
+                        irGateOutputs.put(p.getValue(), e);
+        }
+        for (ModelEntry e : irFlipFlops) {
+            ObservableValue d = null, q = null;
+            for (Pin p : e.getPins()) {
+                if (p.getName().equals("D")) d = p.getValue();
+                if (p.getName().equals("Q")) q = p.getValue();
+            }
+            // walk back from D through the gates (a few levels) until a ROM IN bit shows up
+            Deque<ObservableValue> todo = new ArrayDeque<>(List.of(d));
+            Set<ObservableValue> seen = Collections.newSetFromMap(new IdentityHashMap<>());
+            for (int steps = 0; !todo.isEmpty() && steps < 50; steps++) {
+                ObservableValue v = todo.poll();
+                if (!seen.add(v)) continue;
+                for (int i = 0; i < 16; i++)
+                    if (romIn[i] == v) { irBits[i] = q; todo.clear(); break; }
+                ModelEntry gate = irGateOutputs.get(v);
+                if (gate != null)
+                    for (Pin p : gate.getPins())
+                        if (p.getDirection() != de.neemann.digital.core.element.PinDescription.Direction.output)
+                            todo.add(p.getValue());
+            }
         }
 
         EEPROM eeprom = m.findNode(EEPROM.class).get(0);
@@ -138,7 +187,7 @@ public class CpuTrace {
         while (cycle < maxCycles) {
             if (interval > 0 && cycle > 0 && cycle % interval == 0 && cycle / interval <= keys.length())
                 type(m, keyboards, typed, keys.substring((int) (cycle / interval) - 1, (int) (cycle / interval)));
-            long ir = bits("IR.dig", "I", 16);
+            long ir = irValue();
             long a = bits("ALU.dig", "AO", 8);
             long x = bits("RFILE.dig", "XO", 8);
             long y = bits("RFILE.dig", "YO", 8);
