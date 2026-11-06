@@ -132,7 +132,6 @@ Rewritten today, it matches `ADDR_DEC.dig`, `MMIO.dig` and how the programs use 
 ### isa.md
 
 The table is checked by `programs/tests/test_microcode.py`: every opcode slot is there, and the opcodes, subOps and cycles match the microcode and the assembler. The notes and the pseudo-instructions are right too.
-| Missing | Known Issues | - | `SHR` and `ROR` don't work in `CPU.dig` yet: their result never reaches the data bus (the missing junction in `issues.md`). The `POPF` fix needs that junction too | add a line |
 
 ### instructiondecoding.md
 
