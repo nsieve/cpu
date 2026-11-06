@@ -36,7 +36,7 @@ Cycles count every microstep, including the fetch (step 0).
 | INC A         |  0x15  |   -   |               A <-- A + 1                | Z,C,N,V |   2    |
 | DEC A         |  0x16  |   -   |               A <-- A - 1                | Z,C,N,V |   2    |
 | SHR A         |  0x17  |   -   |            A <-- {0, A[7:1]}             |    -    |   2    |
-| ROR A         |  0x18  |   -   |            A <-- {C, A[7:1]}             |    -    |   2*   |
+| ROR A         |  0x18  |   -   |            A <-- {C, A[7:1]}             |    -    |   2    |
 | CP A, REG     |  0x19  |   -   |                  A - Rs                  | Z,C,N,V |   2    |
 | CP A, Imm     |  0x1A  |   -   |                 A - Imm                  | Z,C,N,V |   2    |
 | JC label      |  0x1B  |  0x0  |       if (C == 1):<br>PC <-- imm16       |    -    | 5 / 3  |
@@ -68,9 +68,10 @@ Cycles count every microstep, including the fetch (step 0).
 | DEC SP        |  0x1E  |  0x4  |              SP <-- SP - 1               |    -    |   2    |
 | MOV X, SPH    |  0x1E  |  0x6  |                X <-- SPH                 |    -    |   2    |
 | MOV Y, SPL    |  0x1E  |  0x7  |                Y <-- SPL                 |    -    |   2    |
+| LDT A, XY     |  0x1F  |  0x0  |           A <-- ROM[XY][7:0]             |    -    |   3    |
 | RET           |  0x1F  |  0x1  |         SP + 2<br>PC <-- Mem[SP]         |    -    |   5    |
 | PUSHF         |  0x1F  |  0x5  |     Mem[SP] <-- FR<br>SP <-- SP - 1      |    -    |   2    |
-| POPF          |  0x1F  |  0x6  |     SP <-- SP + 1<br>FR <-- Mem[SP]      | Z,C,N,V |   3*   |
+| POPF          |  0x1F  |  0x6  |     SP <-- SP + 1<br>FR <-- Mem[SP]      | Z,C,N,V |   3    |
 | HALT          |  0x1F  |  0x7  |           freeze the micro-PC            |    -    |   3    |
 
 `5 / 3` on the conditional jumps means 5 cycles if the jump is taken and 3 if it isn't (it just skips the second word).
@@ -86,13 +87,12 @@ Cycles count every microstep, including the fetch (step 0).
 - AND / OR / XOR only load Z and N (`nFLZN_LD`), so C and V keep the value they had.
 - PUSHF / POPF: the flags byte on the stack is `0000VCNZ` (Z in bit 0, N in bit 1, C in bit 2, V in bit 3).
 - INC A / DEC A don't use the carry, they force the carry-in: INC A is A + 0 + 1, and DEC A is A - 0 - 1.
-- Free slots: 0x02 subOp 6-7, 0x03 subOp 2-7, 0x1D subOp 6-7, 0x1E subOp 5 and 0x1F subOp 0, 2, 3, 4 (these last four were the interrupt instructions). If one gets executed, it works as a NOP: 2 cycles, and nothing changes except the PC.
+- Free slots: 0x02 subOp 6-7, 0x03 subOp 2-7, 0x1D subOp 6-7, 0x1E subOp 5 and 0x1F subOp 2, 3, 4 (these were interrupt instructions). If one gets executed, it works as a NOP: 2 cycles, and nothing changes except the PC.
 
-### Known Issues (*)
+- ROR A: the old C goes into bit 7 (the microcode sets `SHR_IN0` only when C = 1). Shifts don't change the flags, so the bit shifted out of bit 0 is lost, it doesn't go into C.
+- LDT A, XY: reads a table from the ROM. In step 1 only the IR's low byte loads from the ROM word at XY, so the opcode the control unit sees stays LDT's, and in step 2 that byte goes to A. XY must point into the ROM (0xC000-0xFFFF). The assembler's `.TABLE` directive writes one byte per word, with LDT's opcode (0xF8) in the high byte.
 
-- ROR: right now its microcode is exactly the same as SHR (`SHR_IN0` is never set), and shifts don't update the flags, so the bit shifted out doesn't go into C.
-
-The full list of open problems is in `planning/issues.md`.
+Open problems are in `planning/issues.md`.
 
 ## Pseudo-Instructions Table
 

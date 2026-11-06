@@ -1,9 +1,8 @@
 ; ==============================================================================
 ; Test Program: SHR and ROR
 ; ==============================================================================
-; digital/tests/check_cpu.py runs it on CPU.dig and on the emulator. It's apart
-; from all_instructions.asm because in CPU.dig the shifter's output doesn't reach
-; the data bus yet (see planning/issues.md), so these are known to be different.
+; digital/tests/check_cpu.py runs it on CPU.dig and on the emulator. ROR runs
+; with C = 1, so bit 7 of the result comes from the carry.
 
 .ORG 0xC000
 

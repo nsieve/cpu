@@ -25,6 +25,9 @@ DIRECTIVES_WORD = [".DW", "DW", ".WORD", "WORD", ".VEC", "VEC", ".VECTOR", "VECT
 DIRECTIVES_BYTE = [".DB", "DB", ".BYTE", "BYTE"]
 DIRECTIVES_RAW  = [".RAW", "RAW"]   # one whole 16-bit word as-is (for hand-encoded instructions)
 DIRECTIVES_EQU  = [".EQU", "EQU"]   # .EQU NAME value: a constant, usable anywhere a number is
+DIRECTIVES_TABLE = [".TABLE", "TABLE"]   # bytes for LDT A, XY: one per word, with LDT's opcode in the high byte
+
+LDT_WORD = (0x1F << 11) | (0 << 8)  # LDT A, XY (base opcode 0x1F, subop 0)
 
 # ==============================================================================
 # TOKENIZER & PARSER HELPERS
@@ -114,6 +117,11 @@ def expand_pseudoinstructions(mnemonic, tokens):
 def encode_instruction(mnemonic, tokens, symbol_table):
     if mnemonic in SYSTEM_OPS:
         return (0x1F << 11) | (SYSTEM_OPS[mnemonic] << 8)
+
+    if mnemonic == "LDT":
+        if tokens != ["A", "XY"]:
+            raise SyntaxError("LDT only exists as LDT A, XY")
+        return LDT_WORD
 
     if mnemonic == "MOV":
         if tokens[0] == "SP" and tokens[1] == "MAR":
@@ -334,6 +342,17 @@ def assemble(source_code, default_origin=0xC000):
                         current_address += 1
                     continue
 
+                if mnemonic in DIRECTIVES_TABLE:
+                    for token in tokens[1:]:
+                        parsed_program.append({
+                            "line_num": line_num,
+                            "address": current_address,
+                            "type": "TABLE",
+                            "val_str": token
+                        })
+                        current_address += 1
+                    continue
+
                 if mnemonic in DIRECTIVES_BYTE:
                     for token in tokens[1:]:
                         parsed_program.append({
@@ -375,6 +394,8 @@ def assemble(source_code, default_origin=0xC000):
                 word = (parse_val(item["val_str"], symbol_table) >> 8) & 0xFF
             elif itype == "DB":
                 word = imm8(item["val_str"], symbol_table)
+            elif itype == "TABLE":
+                word = LDT_WORD | imm8(item["val_str"], symbol_table)
             elif itype == "RAW":
                 word = parse_val(item["val_str"], symbol_table)
                 if not 0 <= word <= 0xFFFF:

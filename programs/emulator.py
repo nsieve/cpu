@@ -205,7 +205,7 @@ def disassemble(word, next_word=None):
                            free, free][sub]
     if op == 0x1E: return ["MOV SP, MAR", "MOV MAR, SP", "MOV SP, XY", "INC SP", "DEC SP", free,
                            "MOV X, SPH", "MOV Y, SPL"][sub]
-    return [free, "RET", free, free, free, "PUSHF", "POPF", "HALT"][sub]
+    return ["LDT A, XY", "RET", free, free, free, "PUSHF", "POPF", "HALT"][sub]
 
 
 def is_two_words(word):

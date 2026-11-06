@@ -98,7 +98,6 @@ JUMPS_OK:
     .RAW 0x1A00         ; opcode 3,  subOp 2
     .RAW 0xEE00         ; opcode 29, subOp 6
     .RAW 0xF500         ; opcode 30, subOp 5
-    .RAW 0xF800         ; opcode 31, subOp 0 (was BRK)
     .RAW 0xFA00         ; opcode 31, subOp 2 (was RTI)
     .RAW 0xFB00         ; opcode 31, subOp 3 (was SEI)
     .RAW 0xFC00         ; opcode 31, subOp 4 (was CLI)

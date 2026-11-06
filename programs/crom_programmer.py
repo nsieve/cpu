@@ -33,7 +33,7 @@ ALU_S2   = 26   # alu select line 2
 nALU_OE  = 27   # output the result of the alu to the data bus
 ALU_CIN  = 28   # carry in on the lowest alu chip
 nSHR_OE  = 29   # output a shift right of the accumulator
-SHR_IN0  = 30   # bit 0 of the shr buffer; 0 = SHR, 1 = ROR
+SHR_IN0  = 30   # bit 7 of the shifted value (0 for SHR, the old C for ROR)
 nFL_OE   = 31   # outputs the flag register to the data bus
 
 # EPROM 3:
@@ -84,7 +84,7 @@ FREE_SLOTS = (
     {(3, sub) for sub in range(2, 8)} |
     {(29, 6), (29, 7)} |
     {(30, 5)} |
-    {(31, 0), (31, 2), (31, 3), (31, 4)}
+    {(31, 2), (31, 3), (31, 4)}
 )
 
 
@@ -242,9 +242,11 @@ def gen_microcode():
                 if microstep == 1:
                     control_word |= (1 << nSHR_OE) | (1 << REG_LD) | (1 << nMPC_RST)
 
-            elif base_opcode == 24:  # ROR A
-                if microstep == 1:
+            elif base_opcode == 24:  # ROR A: A = {C, A[7:1]}. C is part of the microcode address,
+                if microstep == 1:   # so bit 7 (SHR_IN0) is set only when C = 1
                     control_word |= (1 << nSHR_OE) | (1 << REG_LD) | (1 << nMPC_RST)
+                    if c_flag:
+                        control_word |= (1 << SHR_IN0)
 
             elif base_opcode == 25:  # CP A, reg
                 if microstep == 1:
@@ -352,8 +354,14 @@ def gen_microcode():
                     if microstep == 1:
                         control_word |= (1 << nSPL_OE) | (1 << REG_LD) | (1 << nMPC_RST)
 
-            elif base_opcode == 31: # Returns, flags and halt
-                if sub_opcode == 1: # RET
+            elif base_opcode == 31: # LDT, returns, flags and halt
+                if sub_opcode == 0: # LDT A, XY: A = low byte of the ROM word at XY (tables in the ROM)
+                    if microstep == 1: # only the IR's low byte loads, so the opcode the EPROMs see stays LDT's
+                        control_word |= (1 << PC_OE) | (1 << nXYA_OE) | (1 << MEM_RD) | (1 << nIRL_LD)
+                    elif microstep == 2: # [10:8] is 0 (sub-op 0), so REG_LD loads A
+                        control_word |= (1 << nIRD_OE) | (1 << REG_LD) | (1 << nMPC_RST)
+
+                elif sub_opcode == 1: # RET
                     if microstep == 1:
                         control_word |= (1 << PC_OE) | (1 << nSP_OE) | (1 << nSP_INC)
                     elif microstep == 2:

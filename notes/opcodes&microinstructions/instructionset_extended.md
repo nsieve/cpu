@@ -222,7 +222,7 @@ Step 0 is the fetch, and it's the same in every instruction. When a step depends
 | Step | Control bits |
 | ---- | ------------ |
 | 0 | `nIRH_LD`, `nIRL_LD`, `MEM_RD` |
-| 1 | `PC_INC`, `nMPC_RST`, `REG_LD`, `nSHR_OE` |
+| 1 | `PC_INC`, `nMPC_RST`, `REG_LD`, `nSHR_OE`<br>if C: `SHR_IN0` |
 
 ### 0x19 --> CP A, REG
 
@@ -479,6 +479,14 @@ Step 0 is the fetch, and it's the same in every instruction. When a step depends
 | ---- | ------------ |
 | 0 | `nIRH_LD`, `nIRL_LD`, `MEM_RD` |
 | 1 | `PC_INC`, `nMPC_RST`, `REG_LD`, `nSPL_OE` |
+
+### 0x1F subOp 0x0 --> LDT A, XY
+
+| Step | Control bits |
+| ---- | ------------ |
+| 0 | `nIRH_LD`, `nIRL_LD`, `MEM_RD` |
+| 1 | `PC_INC`, `PC_OE`, `nIRL_LD`, `nXYA_OE`, `MEM_RD` |
+| 2 | `nIRD_OE`, `nMPC_RST`, `REG_LD` |
 
 ### 0x1F subOp 0x1 --> RET
 

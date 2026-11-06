@@ -26,8 +26,6 @@ In Digital.
 ## Software
 
 - binary files for a real programmer: one per EPROM for the microcode, and the program split into a high-byte and a low-byte file for the two AT28C256 (right now everything is in Digital's hex format)
-- `ROR` in the microcode: set `SHR_IN0` only when C = 1, so it does A = {C, A[7:1]} like `isa.md` says
-- `LDT A, XY` (`0x1F` sub-op 0): the microcode (step 1 loads only the IR's low byte from the ROM at XY, step 2 puts it in A), a `.TABLE` directive in the assembler, and the emulator and tests
 - update the microcode, assembler, emulator and tests for any other new instructions or I/O
 - more complex pseudoinstructions (maybe split into single-instruction and multi-instruction ones)
 

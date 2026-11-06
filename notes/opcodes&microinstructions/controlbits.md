@@ -38,7 +38,7 @@ Bits that start with `n` are active-low. The programmer writes every bit inactiv
 | 27 | `nALU_OE` | 2 | D11 | low | output the result of the alu to the data bus |
 | 28 | `ALU_CIN` | 2 | D12 | high | carry in on the lowest alu chip |
 | 29 | `nSHR_OE` | 2 | D13 | low | output a shift right of the accumulator |
-| 30 | `SHR_IN0` | 2 | D14 | high | bit 0 of the shr buffer; 0 = SHR, 1 = ROR |
+| 30 | `SHR_IN0` | 2 | D14 | high | bit 7 of the shifted value (0 for SHR, the old C for ROR) |
 | 31 | `nFL_OE` | 2 | D15 | low | outputs the flag register to the data bus |
 | 32 | `nFLZN_LD` | 3 | D0 | low | loads the Z and N flags |
 | 33 | `nFLCV_LD` | 3 | D1 | low | loads the C and V flags (logic operations only load Z and N, so C and V keep their value) |

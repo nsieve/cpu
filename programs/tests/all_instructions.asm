@@ -275,7 +275,16 @@ K2:
     .RAW 0x1A00
     .RAW 0xEE00
     .RAW 0xF500
-    .RAW 0xF800
+    .RAW 0xFA00
+
+    ; ---- LDT: a table in the ROM ----
+    MOV X, HIGH:TABLE
+    MOV Y, LOW:TABLE
+    LDT A, XY
+    ST 0x3A, A
+    INC XY
+    LDT A, XY               ; a word with another high byte: only its low byte goes in
+    ST 0x3B, A
 
     ; ---- MMIO ----
     MOV X, 0xBF
@@ -304,3 +313,7 @@ BAD:
     MOV A, 0xEE
     HALT
     JMP BAD
+
+TABLE:
+    .TABLE 0x12
+    .RAW 0x3CA5

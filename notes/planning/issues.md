@@ -6,9 +6,7 @@ Everything that doesn't work, is missing, or should change. The to-do list says 
 
 Things that exist but don't work as intended.
 
-| Issue | Where | Notes |
-| ----- | ----- | ----- |
-| `ROR` does the same as `SHR` | microcode | `SHR_IN0` is never set, and the bit shifted out doesn't go into C. |
+Nothing right now.
 
 ## Missing
 

@@ -236,13 +236,36 @@ class TestAlu(unittest.TestCase):
                 self.assertEqual(cpu.flags, flags, "SHR shouldn't change the flags")
                 self.assertEqual(cpu.cycles - HALT_CYCLES, 2)
 
-    @unittest.expectedFailure
     def test_ror(self):
-        # issues.md: ROR does the same as SHR (SHR_IN0 is never set, and C doesn't go in)
+        # A = {C, A[7:1]}: the microcode sets SHR_IN0 (bit 7) only when C = 1. The flags don't change
         for a in range(256):
             for carry in (0, 1):
                 cpu = run("ROR A", regs={"A": a}, flags=C if carry else 0)
                 self.assertEqual(cpu.r[0], carry << 7 | a >> 1, f"ROR A with A={a:02X} C={carry}")
+                self.assertEqual(cpu.flags, C if carry else 0, "ROR shouldn't change the flags")
+                self.assertEqual(cpu.cycles - HALT_CYCLES, 2)
+
+    def test_ldt(self):
+        # LDT A, XY: A = the low byte of the ROM word at XY, in 3 cycles. Only the IR's low byte
+        # loads, so the high byte of the table word doesn't matter (.TABLE puts LDT's opcode there)
+        source = """
+            MOV X, HIGH:TABLE
+            MOV Y, LOW:TABLE
+            {moves}
+            LDT A, XY
+            HALT
+        TABLE:
+            .TABLE 0x00, 0x41, 0xFF, 7
+            .RAW 0x3C99
+        """
+        for index, expected in enumerate([0x00, 0x41, 0xFF, 0x07, 0x99]):
+            moves = "\n".join(["INC XY"] * index)
+            rom, symbols = em.assemble_source(".ORG 0xC000\n" + source.format(moves=moves))
+            cpu = run_rom(rom, regs={"A": 0x5A}, flags=Z | C | N | V, symbols=symbols)
+            self.assertEqual(cpu.r[0], expected, f"LDT of table entry {index}")
+            self.assertEqual(cpu.flags, Z | C | N | V, "LDT shouldn't change the flags")
+            self.assertEqual(cpu.cycles, 2 + 2 + 2 * index + 3 + HALT_CYCLES, f"LDT of table entry {index}")
+        self.assertEqual([w >> 8 for w in rom[symbols["TABLE"] - 0xC000:][:4]], [0xF8] * 4, ".TABLE words")
 
 
 class TestJumps(unittest.TestCase):
@@ -311,7 +334,7 @@ class TestJumps(unittest.TestCase):
 
     def test_free_slots(self):
         for raw in (0x1600, 0x1700, 0x1A00, 0x1B00, 0x1C00, 0x1D00, 0x1E00, 0x1F00,
-                    0xEE00, 0xEF00, 0xF500, 0xF800, 0xFA00, 0xFB00, 0xFC00):
+                    0xEE00, 0xEF00, 0xF500, 0xFA00, 0xFB00, 0xFC00):
             values = {r: 0x21 * (i + 1) & 0xFF for i, r in enumerate(REGS)}
             cpu = run(f".RAW 0x{raw:04X}", regs=values, flags=Z | N, mar=0x1234, sp=0x4321)
             self.assertEqual(cpu.r, [values[r] for r in REGS], f".RAW 0x{raw:04X}")
