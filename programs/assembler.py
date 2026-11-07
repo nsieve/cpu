@@ -15,6 +15,9 @@ JMP_COND_MAP = {
     "JC": 0, "JNC": 1, "JZ": 2, "JNZ": 3,
     "JN": 4, "JNN": 5, "JV": 6, "JNV": 7
 }
+# the conditional calls and returns use the same conditions: CALLZ label, RETNC...
+CALL_COND_MAP = {"CALL" + name[1:]: cond for name, cond in JMP_COND_MAP.items()}
+RET_COND_MAP = {"RET" + name[1:]: cond for name, cond in JMP_COND_MAP.items()}
 
 SYSTEM_OPS = {
     "RET": 1, "PUSHF": 5, "POPF": 6, "HALT": 7
@@ -51,6 +54,10 @@ def clean_and_tokenize(raw_line):
 
     if not line:
         return label, []
+
+    # memory operands of the ALU: "[ XY ]" becomes one token, "[XY]"
+    line = re.sub(r"\[\s*", "[", line)
+    line = re.sub(r"\s*\]", "]", line)
 
     tokens = [t.strip() for t in line.replace(',', ' ').split() if t.strip()]
     return label, tokens
@@ -98,9 +105,15 @@ def expand_pseudoinstructions(mnemonic, tokens):
     if mnemonic == "ROL" and tokens == ["A"]:
         return [("ADC", ["A", "A"])]
 
-    # Direct JMP/CALL/JCC label -> 2-word instruction (see technicalities/(temp) jumps.md)
+    # Multi-instruction pseudos
+    if mnemonic == "PUSH" and tokens == ["XY"]:
+        return [("PUSH", ["X"]), ("PUSH", ["Y"])]
+    if mnemonic == "POP" and tokens == ["XY"]:
+        return [("POP", ["Y"]), ("POP", ["X"])]
+
+    # Direct JMP/CALL/JCC/CALLcc label -> 2-word instruction (see design-decisions/jumps.md)
     # Word 1: opcode + target high byte, Word 2: opcode + target low byte
-    if mnemonic in ["JMP", "CALL"] or mnemonic in JMP_COND_MAP:
+    if mnemonic in ["JMP", "CALL"] or mnemonic in JMP_COND_MAP or mnemonic in CALL_COND_MAP:
         if len(tokens) == 1 and tokens[0] not in ["MAR", "XY"]:
             target = tokens[0]
             return [
@@ -119,9 +132,24 @@ def encode_instruction(mnemonic, tokens, symbol_table):
         return (0x1F << 11) | (SYSTEM_OPS[mnemonic] << 8)
 
     if mnemonic == "LDT":
-        if tokens != ["A", "XY"]:
-            raise SyntaxError("LDT only exists as LDT A, XY")
-        return LDT_WORD
+        if tokens == ["A", "XY"]:
+            return LDT_WORD
+        if tokens == ["A", "XY+"]:
+            return (0x1F << 11) | (0x2 << 8)
+        raise SyntaxError("LDT only exists as LDT A, XY and LDT A, XY+")
+
+    # Base Opcode 25 (0x19): Conditional Returns (cond in subop)
+    if mnemonic in RET_COND_MAP:
+        if tokens:
+            raise SyntaxError(f"{mnemonic} doesn't take operands")
+        return (0x19 << 11) | (RET_COND_MAP[mnemonic] << 8)
+
+    # Base Opcode 26 (0x1A): Conditional Direct Calls (2 words, cond in subop)
+    if mnemonic in CALL_COND_MAP:
+        if tokens[0] in ["MAR", "XY"]:
+            raise SyntaxError(f"{mnemonic} only exists with a label")
+        val = parse_val(tokens[0], symbol_table)
+        return (0x1A << 11) | (CALL_COND_MAP[mnemonic] << 8) | (val & 0xFF)
 
     if mnemonic == "MOV":
         if tokens[0] == "SP" and tokens[1] == "MAR":
@@ -193,6 +221,12 @@ def encode_instruction(mnemonic, tokens, symbol_table):
             return (0x05 << 11) | (r_dest << 8)
         elif src == "XY":
             return (0x06 << 11) | (r_dest << 8)
+        elif src == "XY+":
+            if tokens[0] in ["X", "Y"]:
+                raise SyntaxError(f"LD {tokens[0]}, XY+ doesn't exist: X and Y can't load while XY counts")
+            return (0x10 << 11) | (r_dest << 8)
+        elif src == "MAR+":
+            return (0x11 << 11) | (r_dest << 8)
         else:
             val = imm8(src, symbol_table)
             return (0x04 << 11) | (r_dest << 8) | (val & 0xFF)
@@ -204,6 +238,10 @@ def encode_instruction(mnemonic, tokens, symbol_table):
             return (0x08 << 11) | (r_src << 5)
         elif target == "XY":
             return (0x09 << 11) | (r_src << 5)
+        elif target == "XY+":     # Base Opcode 2, subops 6-7, with the source register in [7:5]
+            return (0x02 << 11) | (0x6 << 8) | (r_src << 5)
+        elif target == "MAR+":
+            return (0x02 << 11) | (0x7 << 8) | (r_src << 5)
         else:
             # ST zp, reg: bits [7:5] are part of the address, so the source register
             # goes in [10:8] and SRC_SEL switches the source decoder to read it from there
@@ -220,16 +258,21 @@ def encode_instruction(mnemonic, tokens, symbol_table):
     if mnemonic == "SHR" and tokens[0] == "A": return (0x17 << 11)
     if mnemonic == "ROR" and tokens[0] == "A": return (0x18 << 11)
 
-    # ALU A, REG (0x0C) and ALU A, Imm (0x0D): the subop is the operation
+    # ALU A, REG (0x0C), A, Imm (0x0D), A, [zp] (0x0E) and A, [XY] (0x0F): the subop is the operation
     alu_subops = {"ADD": 0, "ADC": 1, "SUB": 2, "SBC": 3, "AND": 4, "OR": 5, "XOR": 6, "CP": 7}
 
     if mnemonic in alu_subops:
         if len(tokens) != 2 or tokens[0] != "A":
-            raise SyntaxError(f"{mnemonic} only works on A: {mnemonic} A, REG or {mnemonic} A, Imm")
+            raise SyntaxError(f"{mnemonic} only works on A: {mnemonic} A, REG / Imm / [zp] / [XY]")
         subop = alu_subops[mnemonic]
         src = tokens[1]
         if src in REGISTER_MAP:
             return (0x0C << 11) | (subop << 8) | (reg(src) << 5)
+        if src in ["[XY]", "XY"]:
+            return (0x0F << 11) | (subop << 8)
+        if src.startswith("[") and src.endswith("]"):
+            val = imm8(src[1:-1], symbol_table)
+            return (0x0E << 11) | (subop << 8) | (val & 0xFF)
         val = imm8(src, symbol_table)
         return (0x0D << 11) | (subop << 8) | (val & 0xFF)
 

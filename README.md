@@ -12,7 +12,7 @@ An 8-bit CPU designed from scratch and built entirely from 74HC logic chips.
 
 - 8-bit data bus, 16-bit address bus (64 KB of memory)
 - Von Neumann, accumulator-based architecture
-- 72 instructions in 23 of the 32 opcodes, using sub-opcodes (the other 9 opcodes are still free)
+- 109 instructions in 29 of the 32 opcodes, using sub-opcodes (the other 3 opcodes are still free)
 - Microprogrammed control unit: 43 control bits on three 16-bit EPROMs, up to 16 microsteps per instruction
 - Most instructions take 2 cycles, because the fetch of the next instruction overlaps with the execution of the current one
 - 47.75 KB of RAM (1 KB of it for the framebuffer), 16 KB of ROM and 256 bytes of memory-mapped I/O

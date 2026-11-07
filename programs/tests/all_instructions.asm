@@ -4,8 +4,7 @@
 ; It doesn't check itself: digital/tests/check_cpu.py runs it on CPU.dig and on
 ; the emulator and compares them cycle by cycle. Results also go to RAM, so a
 ; wrong value shows up in the final RAM too. If a conditional jump goes the wrong
-; way it ends in BAD (A = 0xEE). The shifts are in shifts.asm, because CPU.dig
-; doesn't do them right yet.
+; way it ends in BAD (A = 0xEE). The shifts are in shifts.asm.
 
 .ORG 0xC000
 
@@ -87,6 +86,38 @@ START:
     LD D, XY
     ST XY, Y
     LD E, XY
+
+    ; ---- auto-increment: copy 3 bytes with XY+ and MAR+ and back, across page boundaries ----
+    MOV A, 0x3C
+    ST 0x50, A
+    MOV A, 0x81
+    ST 0x51, A
+    MOV A, 0xF7
+    ST 0x52, A
+    MOV X, 0x00
+    MOV Y, 0x50
+    MOV MARH, 0x22
+    MOV MARL, 0xFF          ; 0x22FF, the next byte goes to 0x2300
+    LD B, XY+
+    ST MAR+, B
+    LD C, XY+
+    ST MAR+, C
+    LD A, XY+
+    ST MAR+, A
+    MOV MARH, 0x22
+    MOV MARL, 0xFF
+    MOV X, 0x24
+    MOV Y, 0xFF             ; 0x24FF
+    LD E, MAR+
+    ST XY+, E
+    LD F, MAR+
+    ST XY+, F
+    LD A, MAR+
+    ST XY+, A
+    ST XY+, X               ; the X from before the increment (0x25)
+    ST XY+, Y
+    ST 0x54, X
+    ST 0x55, Y
 
     ; ---- push / pop ----
     MOV A, 0xA1
@@ -171,6 +202,45 @@ START:
     XOR A, 0xFF             ; C and V stay from the ADC
     PUSHF
     ST 0x3C, A
+
+    ; ---- ALU with memory: the zero page (0x50 = 0x3C, 0x51 = 0x81) and XY ----
+    MOV A, 0x10
+    ADD A, [0x50]
+    PUSHF
+    ADC A, [0x51]
+    PUSHF
+    SUB A, [0x50]
+    PUSHF
+    SBC A, [0x51]
+    PUSHF
+    AND A, [0x50]
+    PUSHF
+    OR A, [0x51]
+    PUSHF
+    XOR A, [0x50]
+    PUSHF
+    CP A, [0x51]
+    PUSHF
+    ST 0x56, A
+    MOV X, 0x00
+    MOV Y, 0x52             ; XY points to 0x0052 (0xF7)
+    ADD A, [XY]
+    PUSHF
+    ADC A, [XY]
+    PUSHF
+    SUB A, [XY]
+    PUSHF
+    SBC A, [XY]
+    PUSHF
+    AND A, [XY]
+    PUSHF
+    OR A, [XY]
+    PUSHF
+    XOR A, [XY]
+    PUSHF
+    CP A, [XY]
+    PUSHF
+    ST 0x57, A
 
     ; ---- INC / DEC ----
     MOV A, 0x7F
@@ -282,12 +352,34 @@ K2:
     CALL XY
     ST 0x37, A              ; 3 if the 3 calls came back
 
+    ; ---- conditional calls and returns, each one taken and not taken ----
+    MOV A, 0x05
+    CP A, 0x05              ; Z C
+    CALLNZ BAD
+    CALLNC BAD
+    CALLN BAD
+    CALLV BAD
+    CALLZ RT_ZC             ; RT_ZC tries every return
+    CALLC RT_C
+    CALLNN RT_NN
+    CALLNV RT_NV
+    MOV A, 0x7F
+    CP A, 0xFF              ; 0x80: N V, no Z, and a borrow (C = 0)
+    CALLZ BAD
+    CALLC BAD
+    CALLNN BAD
+    CALLNV BAD
+    CALLNZ RT_NV_N          ; RT_NV_N tries every return
+    CALLNC RT_NC
+    CALLN RT_N
+    CALLV RT_V
+
     ; ---- free slots, they work as NOPs ----
-    .RAW 0x1600
+    .RAW 0x1B00
     .RAW 0x1A00
     .RAW 0xEE00
     .RAW 0xF500
-    .RAW 0xFA00
+    .RAW 0x9000
 
     ; ---- LDT: a table in the ROM ----
     MOV X, HIGH:TABLE
@@ -297,6 +389,14 @@ K2:
     INC XY
     LDT A, XY               ; a word with another high byte: only its low byte goes in
     ST 0x3B, A
+    MOV X, HIGH:TABLE
+    MOV Y, LOW:TABLE
+    LDT A, XY+
+    MOV B, A
+    LDT A, XY+              ; XY ends after the table
+    ST 0x58, B
+    ST 0x59, A
+    ST 0x5A, Y
 
     ; ---- MMIO ----
     MOV X, 0xBF
@@ -320,6 +420,40 @@ DONE:
 SUB1:
     INC A
     RET
+
+RT_ZC:                      ; with Z C: the 4 false conditions first
+    RETNZ
+    RETNC
+    RETN
+    RETV
+    RETZ
+    JMP BAD
+RT_C:
+    RETC
+    JMP BAD
+RT_NN:
+    RETNN
+    JMP BAD
+RT_NV:
+    RETNV
+    JMP BAD
+
+RT_NV_N:                    ; with N V: the 4 false conditions first
+    RETZ
+    RETC
+    RETNN
+    RETNV
+    RETNZ
+    JMP BAD
+RT_NC:
+    RETNC
+    JMP BAD
+RT_N:
+    RETN
+    JMP BAD
+RT_V:
+    RETV
+    JMP BAD
 
 BAD:
     MOV A, 0xEE

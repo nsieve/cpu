@@ -10,7 +10,6 @@
 Things that came up while writing the first programs (Fibonacci, primes, the MAX7219 driver):
 
 - Shifts don't update the carry, so the bit shifted out of `SHR`/`ROR` is lost (no fast shift-and-add multiplication or multi-byte right shifts without it). It would need hardware: C loading from A's bit 0
-- Store with auto-increment, `ST XY+, REG` (`0x02` sub-op 6 or 7): store at XY and increment XY in the same step (it only changes on the clock edge). Half the instructions to fill or copy memory, like the framebuffer. The load version doesn't fit as well, because the destination comes from `[10:8]`
 - Not worth it for now: relative jumps (faster loops and they don't overwrite the MAR, but they need a 16-bit adder for the PC) and a hardware multiplier (a table of squares gets most of the speed)
 
 ## Demo Ideas (For the Final Presentation)

@@ -94,11 +94,11 @@ JUMPS_OK:
     ;    (the step counter should go 0, 1, 0 on each one)
     MOV A, 0x5A
     MOV B, 0xA5
-    .RAW 0x1600         ; opcode 2,  subOp 6
+    .RAW 0x1B00         ; opcode 3,  subOp 3
     .RAW 0x1A00         ; opcode 3,  subOp 2
     .RAW 0xEE00         ; opcode 29, subOp 6
     .RAW 0xF500         ; opcode 30, subOp 5
-    .RAW 0xFA00         ; opcode 31, subOp 2 (was RTI)
+    .RAW 0x9000         ; opcode 18, subOp 0 (an old ALU opcode)
     .RAW 0xFB00         ; opcode 31, subOp 3 (was SEI)
     .RAW 0xFC00         ; opcode 31, subOp 4 (was CLI)
 

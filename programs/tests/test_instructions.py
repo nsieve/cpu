@@ -72,6 +72,17 @@ def operand_cases(count=150, seed=1):
     return cases
 
 
+ALU_OPS = ["ADD", "ADC", "SUB", "SBC", "AND", "OR", "XOR", "CP"]     # in subop order
+
+def ref_alu(op, a, b, flags):
+    """isa.md for the 8 ALU operations: returns (A, flags) after 'op A, b' with these flags before."""
+    if op in ("AND", "OR", "XOR"):                  # only Z and N load, C and V keep their value
+        res = {"AND": a & b, "OR": a | b, "XOR": a ^ b}[op]
+        return res, flags & (C | V) | flag_bits(res) & (Z | N)
+    res, new_flags = ref_arith(op, a, b, flags >> 1 & 1)
+    return (a if op == "CP" else res), new_flags
+
+
 
 def flags_byte(flags):
     """Z C N V (bits 0-3, like cpu.flags) -> the byte PUSHF writes: 0000VCNZ."""
@@ -159,6 +170,68 @@ class TestLoadsAndStores(unittest.TestCase):
         cpu = run("PUSH A\nPUSH B\nPOP C\nPOP D", regs={"A": 1, "B": 2}, sp=0xBAFF)
         self.assertEqual((cpu.r[2], cpu.r[3], cpu.sp), (2, 1, 0xBAFF))
 
+    def test_push_pop_xy(self):
+        # pseudo-instructions: PUSH XY is PUSH X + PUSH Y, and POP XY is POP Y + POP X
+        cpu = run("PUSH XY\nMOV X, 0\nMOV Y, 0\nPOP XY", regs={"X": 0x12, "Y": 0x34}, sp=0xBAFF)
+        self.assertEqual((cpu.r[6], cpu.r[7], cpu.sp), (0x12, 0x34, 0xBAFF))
+        self.assertEqual((cpu.ram[0xBAFF], cpu.ram[0xBAFE]), (0x12, 0x34))
+        self.assertEqual(cpu.cycles - HALT_CYCLES, 2 + 2 + 2 + 2 + 3 + 3)
+
+    def test_ld_st_xy_plus(self):
+        # the access uses XY, and XY + 1 happens on the same clock edge (also from Y into X)
+        for start in (0x3456, 0x12FF, 0x00FF):
+            regs = {"X": start >> 8, "Y": start & 0xFF}
+            for i, r in enumerate("ABCDEF"):
+                cpu = run(f"LD {r}, XY+", regs=regs, ram={start: 0x70 + i})
+                self.assertEqual(cpu.r[i], 0x70 + i, f"LD {r}, XY+ from 0x{start:04X}")
+                self.assertEqual(cpu.r[6] << 8 | cpu.r[7], start + 1, f"LD {r}, XY+ from 0x{start:04X}")
+                self.assertEqual(cpu.cycles - HALT_CYCLES, 2)
+            for i, r in enumerate(REGS):
+                values = dict(regs)
+                values.setdefault(r, 0x80 + i)              # ST XY+, X stores the old X
+                cpu = run(f"ST XY+, {r}", regs=values)
+                self.assertEqual(cpu.ram[start], values[r], f"ST XY+, {r} at 0x{start:04X}")
+                self.assertEqual(cpu.r[6] << 8 | cpu.r[7], start + 1, f"ST XY+, {r} at 0x{start:04X}")
+                self.assertEqual(cpu.cycles - HALT_CYCLES, 2)
+
+    def test_ld_x_or_y_xy_plus(self):
+        # X and Y can't load while XY counts: the assembler rejects it, and the emulator reports it
+        for r in ("X", "Y"):
+            with self.assertRaises(em.assembler.AssemblerError):
+                em.assemble_source(f".ORG 0xC000\nLD {r}, XY+")
+            with self.assertRaises(em.EmulatorError):
+                run(f".RAW 0x{0x10 << 11 | REGS.index(r) << 8:04X}", regs={"X": 0x12, "Y": 0x34})
+
+    def test_ld_st_mar_plus(self):
+        for start in (0x3456, 0x12FF, 0x00FF):
+            for i, r in enumerate(REGS):
+                cpu = run(f"LD {r}, MAR+", mar=start, ram={start: 0x50 + i})
+                self.assertEqual((cpu.r[i], cpu.mar), (0x50 + i, start + 1), f"LD {r}, MAR+ from 0x{start:04X}")
+                self.assertEqual(cpu.cycles - HALT_CYCLES, 2)
+                cpu = run(f"ST MAR+, {r}", mar=start, regs={r: 0x60 + i})
+                self.assertEqual((cpu.ram[start], cpu.mar), (0x60 + i, start + 1), f"ST MAR+, {r} at 0x{start:04X}")
+                self.assertEqual(cpu.cycles - HALT_CYCLES, 2)
+
+    def test_copy(self):
+        # what the auto-increments are for: copying memory takes 4 cycles per byte
+        source = """
+            MOV X, 0x20
+            MOV Y, 0x00
+            MOV MARH, 0x30
+            MOV MARL, 0x00
+            LD B, XY+
+            ST MAR+, B
+            LD B, XY+
+            ST MAR+, B
+            LD B, XY+
+            ST MAR+, B
+        """
+        data = {0x2000: 0x11, 0x2001: 0x22, 0x2002: 0x33}
+        cpu = run(source, ram=data)
+        self.assertEqual(bytes(cpu.ram[0x3000:0x3003]), bytes([0x11, 0x22, 0x33]))
+        self.assertEqual((cpu.r[6] << 8 | cpu.r[7], cpu.mar), (0x2003, 0x3003))
+        self.assertEqual(cpu.cycles - HALT_CYCLES, 4 * 2 + 3 * 4)
+
 
 class TestAlu(unittest.TestCase):
     def check_reg_op(self, op, writes_a=True):
@@ -191,18 +264,37 @@ class TestAlu(unittest.TestCase):
     def test_cp(self): self.check_reg_op("CP", writes_a=False)
     def test_cp_imm(self): self.check_imm_op("CP", writes_a=False)
 
+    def test_alu_memory_operands(self):
+        # ALU A, [zp] (0x0E) and ALU A, [XY] (0x0F): the same 8 operations, with the operand from RAM
+        for op in ALU_OPS:
+            for operand, addr in (("[0x40]", 0x0040), ("[0xFF]", 0x00FF), ("[XY]", 0x1234)):
+                rom, _ = em.assemble_source(f".ORG 0xC000\n{op} A, {operand}\nHALT")
+                for a, b, carry in operand_cases(40):
+                    before = carry * C | (a & 1) * V
+                    cpu = run_rom(rom, regs={"A": a, "X": 0x12, "Y": 0x34}, flags=before, ram={addr: b})
+                    res, flags = ref_alu(op, a, b, before)
+                    self.assertEqual((cpu.r[0], em.flags_str(cpu.flags)), (res, em.flags_str(flags)),
+                                     f"{op} A, {operand} with A={a:02X} mem={b:02X} C={carry}")
+                    self.assertEqual((cpu.r[6], cpu.r[7]), (0x12, 0x34), f"{op} A, {operand} changed XY")
+                    self.assertEqual(cpu.cycles - HALT_CYCLES, 2)
+
     def test_alu_opcodes(self):
-        # ALU A, REG is 0x0C and ALU A, Imm is 0x0D, and the subop is the operation
-        for subop, op in enumerate(["ADD", "ADC", "SUB", "SBC", "AND", "OR", "XOR", "CP"]):
-            rom, _ = em.assemble_source(f".ORG 0xC000\n{op} A, C\n{op} A, 0x5A")
+        # ALU A, REG is 0x0C, A, Imm 0x0D, A, [zp] 0x0E and A, [XY] 0x0F, and the subop is the operation
+        for subop, op in enumerate(ALU_OPS):
+            rom, _ = em.assemble_source(f".ORG 0xC000\n.EQU VAR 0x21\n{op} A, C\n{op} A, 0x5A\n{op} A, [0x5A]\n"
+                                        f"{op} A, [ VAR ]\n{op} A, [XY]\n{op} A, XY")
             self.assertEqual(rom[0], 0x0C << 11 | subop << 8 | 2 << 5, f"{op} A, C")
             self.assertEqual(rom[1], 0x0D << 11 | subop << 8 | 0x5A, f"{op} A, 0x5A")
+            self.assertEqual(rom[2], 0x0E << 11 | subop << 8 | 0x5A, f"{op} A, [0x5A]")
+            self.assertEqual(rom[3], 0x0E << 11 | subop << 8 | 0x21, f"{op} A, [ VAR ]")
+            self.assertEqual(rom[4:6], [0x0F << 11 | subop << 8] * 2, f"{op} A, [XY] and {op} A, XY")
 
     def test_alu_keeps_the_other_registers(self):
         # A loads with nA_LD, not through the decoder, so the subop in [10:8] doesn't load B-Y
         values = {r: 0x21 * (i + 1) & 0xFF for i, r in enumerate(REGS)}
-        for op in ("ADD", "ADC", "SUB", "SBC", "AND", "OR", "XOR", "CP"):
-            for src in ("B", "0x0F"):
+        values.update(X=0x12, Y=0x34)                   # [XY] has to point to the RAM
+        for op in ALU_OPS:
+            for src in ("B", "0x0F", "[0x40]", "[XY]"):
                 cpu = run(f"{op} A, {src}", regs=values)
                 self.assertEqual(cpu.r[1:], [values[r] for r in REGS[1:]], f"{op} A, {src}")
 
@@ -289,6 +381,30 @@ class TestAlu(unittest.TestCase):
             self.assertEqual(cpu.cycles, 2 + 2 + 2 * index + 3 + HALT_CYCLES, f"LDT of table entry {index}")
         self.assertEqual([w >> 8 for w in rom[symbols["TABLE"] - 0xC000:][:4]], [0xF8] * 4, ".TABLE words")
 
+    def test_ldt_xy_plus(self):
+        # LDT A, XY+: LDT A, XY and then XY + 1, still 3 cycles. Its subop is 2, so A loads with
+        # nA_LD and C (register 2) must not change
+        source = """
+            MOV X, HIGH:TABLE
+            MOV Y, LOW:TABLE
+            LDT A, XY+
+            MOV B, A
+            LDT A, XY+
+            MOV D, A
+            LDT A, XY+
+            HALT
+        TABLE:
+            .TABLE 0x41, 0x42
+            .RAW 0x3C99
+        """
+        rom, symbols = em.assemble_source(".ORG 0xC000\n" + source)
+        cpu = run_rom(rom, regs={"C": 0x5A}, flags=Z | C | N | V, symbols=symbols)
+        self.assertEqual((cpu.r[1], cpu.r[3], cpu.r[0]), (0x41, 0x42, 0x99))
+        self.assertEqual(cpu.r[2], 0x5A, "LDT A, XY+ loaded C")
+        self.assertEqual(cpu.r[6] << 8 | cpu.r[7], symbols["TABLE"] + 3)
+        self.assertEqual(cpu.flags, Z | C | N | V, "LDT A, XY+ shouldn't change the flags")
+        self.assertEqual(cpu.cycles, 2 + 2 + 3 * 3 + 2 * 2 + HALT_CYCLES)
+
 
 class TestJumps(unittest.TestCase):
     def test_conditional_jumps(self):
@@ -346,6 +462,57 @@ class TestJumps(unittest.TestCase):
             # setup + CALL + MOV A + RET + MOV B + HALT
             self.assertEqual(cpu.cycles, setup_cycles + cycles + 2 + 5 + 2 + HALT_CYCLES, call)
 
+    def test_conditional_calls(self):
+        source = """
+            {call}
+        BACK:
+            MOV B, 0x77
+            HALT
+        SUB:
+            MOV A, 0x66
+            RET
+        """
+        for i, cond in enumerate(em.CONDITIONS):
+            bit = [C, C, Z, Z, N, N, V, V][i]
+            for flags in (0, bit):
+                taken = bool(flags) != (i % 2 == 1)
+                rom, symbols = em.assemble_source(".ORG 0xC000\n" + source.format(call=f"CALL{cond} SUB"))
+                cpu = run_rom(rom, flags=flags, sp=0xBAFF, symbols=symbols)
+                what = f"CALL{cond} with flags {em.flags_str(flags)}"
+                self.assertEqual((cpu.r[0], cpu.r[1], cpu.sp), (0x66 if taken else 0, 0x77, 0xBAFF), what)
+                if taken:
+                    back = symbols["BACK"]
+                    self.assertEqual((cpu.ram[0xBAFF], cpu.ram[0xBAFE]), (back >> 8, back & 0xFF), what)
+                # CALLcc (+ MOV A + RET) + MOV B + HALT
+                self.assertEqual(cpu.cycles, (7 + 2 + 5 if taken else 3) + 2 + HALT_CYCLES, what)
+
+    def test_conditional_returns(self):
+        source = """
+            CALL SUB
+            MOV B, 0x77
+            HALT
+        SUB:
+            {ret}
+            MOV A, 0x55
+            RET
+        """
+        for i, cond in enumerate(em.CONDITIONS):
+            bit = [C, C, Z, Z, N, N, V, V][i]
+            for flags in (0, bit):
+                taken = bool(flags) != (i % 2 == 1)
+                rom, symbols = em.assemble_source(".ORG 0xC000\n" + source.format(ret=f"RET{cond}"))
+                cpu = run_rom(rom, flags=flags, sp=0xBAFF, symbols=symbols)
+                what = f"RET{cond} with flags {em.flags_str(flags)}"
+                self.assertEqual((cpu.r[0], cpu.r[1], cpu.sp), (0 if taken else 0x55, 0x77, 0xBAFF), what)
+                self.assertEqual(cpu.flags, flags, what)
+                # CALL + RETcc (+ MOV A + RET) + MOV B + HALT
+                self.assertEqual(cpu.cycles, 7 + (5 if taken else 2 + 2 + 5) + 2 + HALT_CYCLES, what)
+
+    def test_conditional_call_syntax(self):
+        for source in ("CALLZ MAR", "CALLNC XY", "RETZ A"):
+            with self.assertRaises(em.assembler.AssemblerError, msg=source):
+                em.assemble_source(".ORG 0xC000\n" + source)
+
     def test_halt(self):
         rom, symbols = em.assemble_source(".ORG 0xC000\nMOV A, 1\nHALT\nMOV A, 2\nHALT")
         cpu = run_rom(rom)
@@ -355,10 +522,9 @@ class TestJumps(unittest.TestCase):
         self.assertEqual((cpu.r[0], cpu.upc, cpu.pc), (1, 2, 0xC002))
 
     def test_free_slots(self):
-        old_alu = [base << 11 | sub << 8 for base in (0x0E, 0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x19, 0x1A)
-                   for sub in (0, 5)]
-        for raw in [0x1600, 0x1700, 0x1A00, 0x1B00, 0x1C00, 0x1D00, 0x1E00, 0x1F00,
-                    0xEE00, 0xEF00, 0xF500, 0xFA00, 0xFB00, 0xFC00] + old_alu:
+        old_alu = [base << 11 | sub << 8 for base in (0x12, 0x13, 0x14) for sub in (0, 5)]
+        for raw in [0x1A00, 0x1B00, 0x1C00, 0x1D00, 0x1E00, 0x1F00,
+                    0xEE00, 0xEF00, 0xF500, 0xFB00, 0xFC00] + old_alu:
             values = {r: 0x21 * (i + 1) & 0xFF for i, r in enumerate(REGS)}
             cpu = run(f".RAW 0x{raw:04X}", regs=values, flags=Z | N, mar=0x1234, sp=0x4321)
             self.assertEqual(cpu.r, [values[r] for r in REGS], f".RAW 0x{raw:04X}")

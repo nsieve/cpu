@@ -46,9 +46,9 @@ def isa_table():
 
 
 def example(mnemonic):
-    """A real instruction for a line of the table: 'MOV REG, REG' -> 'MOV B, C'."""
+    """A real instruction for a line of the table: 'MOV REG, REG' -> 'MOV B, C', '[Imm]' -> '[0x12]'."""
     regs = iter(["B", "C"])
-    words = [next(regs) if w == "REG" else "0x12" if w == "Imm" else "0xC100" if w == "label" else w
+    words = [next(regs) if w == "REG" else "0xC100" if w == "label" else w.replace("Imm", "0x12")
              for w in mnemonic.replace(",", " , ").split()]
     return " ".join(words).replace(" , ", ", ")
 
@@ -132,7 +132,7 @@ class TestIsaMd(unittest.TestCase):
             text = text.replace("*", "")
             for s in (range(8) if sub is None else [sub]):
                 opcode = base << 3 | s
-                if base == 0x1B:                # JCC label: taken / not taken
+                if "/" in text:                 # JCC label, CALLcc and RETcc: taken / not taken
                     taken, not_taken = (int(x) for x in text.split("/"))
                     for flags in range(16):
                         z, c, n, v = (flags >> i & 1 for i in range(4))

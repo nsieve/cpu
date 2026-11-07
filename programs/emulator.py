@@ -133,8 +133,8 @@ def load_program(path):
 # ALU: two 74382, the carry out of the low one goes to the carry in of the high one
 # ==============================================================================
 # The carry and overflow outputs are worked out like the chip does it, with a
-# generate/propagate signal per bit. In the logic modes they don't mean anything, but
-# they still get loaded into C and V (see planning/issues.md), so they're modeled too.
+# generate/propagate signal per bit. In the logic modes they don't mean anything (AND,
+# OR and XOR only load Z and N), but they're modeled anyway.
 # These formulas were checked against Digital's 74382 with all 4096 input combinations.
 
 ALU_OPS = ["0", "data - A", "A - data", "A + data", "A XOR data", "A OR data", "A AND data", "0xFF"]
@@ -184,7 +184,7 @@ def disassemble(word, next_word=None):
     if op == 0x00: return f"MOV {rd}, 0x{imm:02X}"
     if op == 0x01: return f"MOV {rd}, {rs}"
     if op == 0x02: return [f"MOV MARL, 0x{imm:02X}", f"MOV MARH, 0x{imm:02X}", "INC MAR", "DEC MAR",
-                           "INC XY", "DEC XY", free, free][sub]
+                           "INC XY", "DEC XY", f"ST XY+, {rs}", f"ST MAR+, {rs}"][sub]
     if op == 0x03: return [f"MOV MARL, {rs}", f"MOV MARH, {rs}"][sub] if sub < 2 else free
     if op == 0x04: return f"LD {rd}, 0x{imm:02X}"
     if op == 0x05: return f"LD {rd}, MAR"
@@ -194,23 +194,29 @@ def disassemble(word, next_word=None):
     if op == 0x09: return f"ST XY, {rs}"
     if op == 0x0A: return f"PUSH {rs}"
     if op == 0x0B: return f"POP {rd}"
-    alu = ["ADD", "ADC", "SUB", "SBC", "AND", "OR", "XOR", "CP"]      # the subop of 0x0C and 0x0D
+    alu = ["ADD", "ADC", "SUB", "SBC", "AND", "OR", "XOR", "CP"]      # the subop of 0x0C-0x0F
     if op == 0x0C: return f"{alu[sub]} A, {rs}"
     if op == 0x0D: return f"{alu[sub]} A, 0x{imm:02X}"
-    if op in (0x0E, 0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x19, 0x1A): return free
+    if op == 0x0E: return f"{alu[sub]} A, [0x{imm:02X}]"
+    if op == 0x0F: return f"{alu[sub]} A, [XY]"
+    if op == 0x10: return f"LD {rd}, XY+"
+    if op == 0x11: return f"LD {rd}, MAR+"
+    if op in (0x12, 0x13, 0x14): return free
     if op in (0x15, 0x16, 0x17, 0x18): return ["INC", "DEC", "SHR", "ROR"][op - 0x15] + " A"
+    if op == 0x19: return f"RET{CONDITIONS[sub]}"
+    if op == 0x1A: return f"CALL{CONDITIONS[sub]} {target}"
     if op == 0x1B: return f"J{CONDITIONS[sub]} {target}"
     if op == 0x1C: return f"J{CONDITIONS[sub]} XY"
     if op == 0x1D: return [f"JMP {target}", f"CALL {target}", "JMP MAR", "JMP XY", "CALL MAR", "CALL XY",
                            free, free][sub]
     if op == 0x1E: return ["MOV SP, MAR", "MOV MAR, SP", "MOV SP, XY", "INC SP", "DEC SP", free,
                            "MOV X, SPH", "MOV Y, SPL"][sub]
-    return ["LDT A, XY", "RET", free, free, free, "PUSHF", "POPF", "HALT"][sub]
+    return ["LDT A, XY", "RET", "LDT A, XY+", free, free, "PUSHF", "POPF", "HALT"][sub]
 
 
 def is_two_words(word):
     op, sub = word >> 11, word >> 8 & 7
-    return op == 0x1B or (op == 0x1D and sub in (0, 1))
+    return op in (0x1A, 0x1B) or (op == 0x1D and sub in (0, 1))
 
 
 # ==============================================================================
@@ -378,8 +384,8 @@ def gen_step(cw):
             code.append("c.r[0] = dbus")
             desc.append("A <- data")
     if on(cp.nXY_INC):
-        if on(cp.REG_LD):
-            problems.append("REG_LD and nXY_INC at once")
+        if on(cp.REG_LD):       # fine for A-F (LD REG, XY+), but X and Y can't load while they count
+            code.append("if d >= 6: c.problem('X or Y loads while XY counts')")
         sign = "-" if on(cp.XY_DIR) else "+"
         code.append(f"xy = ((c.r[6] << 8 | c.r[7]) {sign} 1) & 0xFFFF")
         code.append("c.r[6] = xy >> 8")

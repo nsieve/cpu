@@ -62,6 +62,20 @@ Step 0 is the fetch, and it's the same in every instruction. When a step depends
 | 0 | `nIRH_LD`, `nIRL_LD`, `MEM_RD` |
 | 1 | `PC_INC`, `nMPC_RST`, `nXY_INC`, `XY_DIR` |
 
+### 0x02 subOp 0x6 --> ST XY+, REG
+
+| Step | Control bits |
+| ---- | ------------ |
+| 0 | `nIRH_LD`, `nIRL_LD`, `MEM_RD` |
+| 1 | `PC_INC`, `PC_OE`, `nMPC_RST`, `nXY_INC`, `nXYA_OE`, `MEM_WR`, `REG_OE` |
+
+### 0x02 subOp 0x7 --> ST MAR+, REG
+
+| Step | Control bits |
+| ---- | ------------ |
+| 0 | `nIRH_LD`, `nIRL_LD`, `MEM_RD` |
+| 1 | `PC_INC`, `PC_OE`, `nMPC_RST`, `MEM_WR`, `REG_OE`, `nMAR_OE`, `nMAR_INC` |
+
 ### 0x03 subOp 0x0 --> MOV MARL, REG
 
 | Step | Control bits |
@@ -245,6 +259,132 @@ Step 0 is the fetch, and it's the same in every instruction. When a step depends
 | 0 | `nIRH_LD`, `nIRL_LD`, `MEM_RD` |
 | 1 | `PC_INC`, `nIRD_OE`, `nMPC_RST`, `ALU_S1`, `ALU_CIN`, `nFLZN_LD`, `nFLCV_LD` |
 
+### 0x0E subOp 0x0 --> ADD A, [Imm]
+
+| Step | Control bits |
+| ---- | ------------ |
+| 0 | `nIRH_LD`, `nIRL_LD`, `MEM_RD` |
+| 1 | `PC_INC`, `PC_OE`, `nIRA_OE`, `nHBA_OE`, `nMPC_RST`, `MEM_RD`, `nA_LD`, `A_SEL`, `ALU_S0`, `ALU_S1`, `nFLZN_LD`, `nFLCV_LD` |
+
+### 0x0E subOp 0x1 --> ADC A, [Imm]
+
+| Step | Control bits |
+| ---- | ------------ |
+| 0 | `nIRH_LD`, `nIRL_LD`, `MEM_RD` |
+| 1 | `PC_INC`, `PC_OE`, `nIRA_OE`, `nHBA_OE`, `nMPC_RST`, `MEM_RD`, `nA_LD`, `A_SEL`, `ALU_S0`, `ALU_S1`, `nFLZN_LD`, `nFLCV_LD`<br>if C: `ALU_CIN` |
+
+### 0x0E subOp 0x2 --> SUB A, [Imm]
+
+| Step | Control bits |
+| ---- | ------------ |
+| 0 | `nIRH_LD`, `nIRL_LD`, `MEM_RD` |
+| 1 | `PC_INC`, `PC_OE`, `nIRA_OE`, `nHBA_OE`, `nMPC_RST`, `MEM_RD`, `nA_LD`, `A_SEL`, `ALU_S1`, `ALU_CIN`, `nFLZN_LD`, `nFLCV_LD` |
+
+### 0x0E subOp 0x3 --> SBC A, [Imm]
+
+| Step | Control bits |
+| ---- | ------------ |
+| 0 | `nIRH_LD`, `nIRL_LD`, `MEM_RD` |
+| 1 | `PC_INC`, `PC_OE`, `nIRA_OE`, `nHBA_OE`, `nMPC_RST`, `MEM_RD`, `nA_LD`, `A_SEL`, `ALU_S1`, `nFLZN_LD`, `nFLCV_LD`<br>if C: `ALU_CIN` |
+
+### 0x0E subOp 0x4 --> AND A, [Imm]
+
+| Step | Control bits |
+| ---- | ------------ |
+| 0 | `nIRH_LD`, `nIRL_LD`, `MEM_RD` |
+| 1 | `PC_INC`, `PC_OE`, `nIRA_OE`, `nHBA_OE`, `nMPC_RST`, `MEM_RD`, `nA_LD`, `A_SEL`, `ALU_S1`, `ALU_S2`, `nFLZN_LD` |
+
+### 0x0E subOp 0x5 --> OR A, [Imm]
+
+| Step | Control bits |
+| ---- | ------------ |
+| 0 | `nIRH_LD`, `nIRL_LD`, `MEM_RD` |
+| 1 | `PC_INC`, `PC_OE`, `nIRA_OE`, `nHBA_OE`, `nMPC_RST`, `MEM_RD`, `nA_LD`, `A_SEL`, `ALU_S0`, `ALU_S2`, `nFLZN_LD` |
+
+### 0x0E subOp 0x6 --> XOR A, [Imm]
+
+| Step | Control bits |
+| ---- | ------------ |
+| 0 | `nIRH_LD`, `nIRL_LD`, `MEM_RD` |
+| 1 | `PC_INC`, `PC_OE`, `nIRA_OE`, `nHBA_OE`, `nMPC_RST`, `MEM_RD`, `nA_LD`, `A_SEL`, `ALU_S2`, `nFLZN_LD` |
+
+### 0x0E subOp 0x7 --> CP A, [Imm]
+
+| Step | Control bits |
+| ---- | ------------ |
+| 0 | `nIRH_LD`, `nIRL_LD`, `MEM_RD` |
+| 1 | `PC_INC`, `PC_OE`, `nIRA_OE`, `nHBA_OE`, `nMPC_RST`, `MEM_RD`, `ALU_S1`, `ALU_CIN`, `nFLZN_LD`, `nFLCV_LD` |
+
+### 0x0F subOp 0x0 --> ADD A, [XY]
+
+| Step | Control bits |
+| ---- | ------------ |
+| 0 | `nIRH_LD`, `nIRL_LD`, `MEM_RD` |
+| 1 | `PC_INC`, `PC_OE`, `nMPC_RST`, `nXYA_OE`, `MEM_RD`, `nA_LD`, `A_SEL`, `ALU_S0`, `ALU_S1`, `nFLZN_LD`, `nFLCV_LD` |
+
+### 0x0F subOp 0x1 --> ADC A, [XY]
+
+| Step | Control bits |
+| ---- | ------------ |
+| 0 | `nIRH_LD`, `nIRL_LD`, `MEM_RD` |
+| 1 | `PC_INC`, `PC_OE`, `nMPC_RST`, `nXYA_OE`, `MEM_RD`, `nA_LD`, `A_SEL`, `ALU_S0`, `ALU_S1`, `nFLZN_LD`, `nFLCV_LD`<br>if C: `ALU_CIN` |
+
+### 0x0F subOp 0x2 --> SUB A, [XY]
+
+| Step | Control bits |
+| ---- | ------------ |
+| 0 | `nIRH_LD`, `nIRL_LD`, `MEM_RD` |
+| 1 | `PC_INC`, `PC_OE`, `nMPC_RST`, `nXYA_OE`, `MEM_RD`, `nA_LD`, `A_SEL`, `ALU_S1`, `ALU_CIN`, `nFLZN_LD`, `nFLCV_LD` |
+
+### 0x0F subOp 0x3 --> SBC A, [XY]
+
+| Step | Control bits |
+| ---- | ------------ |
+| 0 | `nIRH_LD`, `nIRL_LD`, `MEM_RD` |
+| 1 | `PC_INC`, `PC_OE`, `nMPC_RST`, `nXYA_OE`, `MEM_RD`, `nA_LD`, `A_SEL`, `ALU_S1`, `nFLZN_LD`, `nFLCV_LD`<br>if C: `ALU_CIN` |
+
+### 0x0F subOp 0x4 --> AND A, [XY]
+
+| Step | Control bits |
+| ---- | ------------ |
+| 0 | `nIRH_LD`, `nIRL_LD`, `MEM_RD` |
+| 1 | `PC_INC`, `PC_OE`, `nMPC_RST`, `nXYA_OE`, `MEM_RD`, `nA_LD`, `A_SEL`, `ALU_S1`, `ALU_S2`, `nFLZN_LD` |
+
+### 0x0F subOp 0x5 --> OR A, [XY]
+
+| Step | Control bits |
+| ---- | ------------ |
+| 0 | `nIRH_LD`, `nIRL_LD`, `MEM_RD` |
+| 1 | `PC_INC`, `PC_OE`, `nMPC_RST`, `nXYA_OE`, `MEM_RD`, `nA_LD`, `A_SEL`, `ALU_S0`, `ALU_S2`, `nFLZN_LD` |
+
+### 0x0F subOp 0x6 --> XOR A, [XY]
+
+| Step | Control bits |
+| ---- | ------------ |
+| 0 | `nIRH_LD`, `nIRL_LD`, `MEM_RD` |
+| 1 | `PC_INC`, `PC_OE`, `nMPC_RST`, `nXYA_OE`, `MEM_RD`, `nA_LD`, `A_SEL`, `ALU_S2`, `nFLZN_LD` |
+
+### 0x0F subOp 0x7 --> CP A, [XY]
+
+| Step | Control bits |
+| ---- | ------------ |
+| 0 | `nIRH_LD`, `nIRL_LD`, `MEM_RD` |
+| 1 | `PC_INC`, `PC_OE`, `nMPC_RST`, `nXYA_OE`, `MEM_RD`, `ALU_S1`, `ALU_CIN`, `nFLZN_LD`, `nFLCV_LD` |
+
+### 0x10 --> LD REG, XY+
+
+| Step | Control bits |
+| ---- | ------------ |
+| 0 | `nIRH_LD`, `nIRL_LD`, `MEM_RD` |
+| 1 | `PC_INC`, `PC_OE`, `nMPC_RST`, `nXY_INC`, `nXYA_OE`, `MEM_RD`, `REG_LD` |
+
+### 0x11 --> LD REG, MAR+
+
+| Step | Control bits |
+| ---- | ------------ |
+| 0 | `nIRH_LD`, `nIRL_LD`, `MEM_RD` |
+| 1 | `PC_INC`, `PC_OE`, `nMPC_RST`, `MEM_RD`, `REG_LD`, `nMAR_OE`, `nMAR_INC` |
+
 ### 0x15 --> INC A
 
 | Step | Control bits |
@@ -272,6 +412,182 @@ Step 0 is the fetch, and it's the same in every instruction. When a step depends
 | ---- | ------------ |
 | 0 | `nIRH_LD`, `nIRL_LD`, `MEM_RD` |
 | 1 | `PC_INC`, `nMPC_RST`, `REG_LD`, `nSHR_OE`<br>if C: `SHR_IN0` |
+
+### 0x19 subOp 0x0 --> RETC
+
+| Step | Control bits |
+| ---- | ------------ |
+| 0 | `nIRH_LD`, `nIRL_LD`, `MEM_RD` |
+| 1 | `PC_INC`<br>if C: `PC_OE`, `nSP_INC`, `nSP_OE`<br>if NC: `nMPC_RST` |
+| 2 | `PC_OE`, `MEM_RD`, `nMARL_LD`, `nSP_INC`, `nSP_OE` |
+| 3 | `PC_OE`, `MEM_RD`, `nMARH_LD`, `nSP_OE` |
+| 4 | `nPC_LD`, `PC_OE`, `nMPC_RST`, `nMAR_OE` |
+
+### 0x19 subOp 0x1 --> RETNC
+
+| Step | Control bits |
+| ---- | ------------ |
+| 0 | `nIRH_LD`, `nIRL_LD`, `MEM_RD` |
+| 1 | `PC_INC`<br>if C: `nMPC_RST`<br>if NC: `PC_OE`, `nSP_INC`, `nSP_OE` |
+| 2 | `PC_OE`, `MEM_RD`, `nMARL_LD`, `nSP_INC`, `nSP_OE` |
+| 3 | `PC_OE`, `MEM_RD`, `nMARH_LD`, `nSP_OE` |
+| 4 | `nPC_LD`, `PC_OE`, `nMPC_RST`, `nMAR_OE` |
+
+### 0x19 subOp 0x2 --> RETZ
+
+| Step | Control bits |
+| ---- | ------------ |
+| 0 | `nIRH_LD`, `nIRL_LD`, `MEM_RD` |
+| 1 | `PC_INC`<br>if Z: `PC_OE`, `nSP_INC`, `nSP_OE`<br>if NZ: `nMPC_RST` |
+| 2 | `PC_OE`, `MEM_RD`, `nMARL_LD`, `nSP_INC`, `nSP_OE` |
+| 3 | `PC_OE`, `MEM_RD`, `nMARH_LD`, `nSP_OE` |
+| 4 | `nPC_LD`, `PC_OE`, `nMPC_RST`, `nMAR_OE` |
+
+### 0x19 subOp 0x3 --> RETNZ
+
+| Step | Control bits |
+| ---- | ------------ |
+| 0 | `nIRH_LD`, `nIRL_LD`, `MEM_RD` |
+| 1 | `PC_INC`<br>if Z: `nMPC_RST`<br>if NZ: `PC_OE`, `nSP_INC`, `nSP_OE` |
+| 2 | `PC_OE`, `MEM_RD`, `nMARL_LD`, `nSP_INC`, `nSP_OE` |
+| 3 | `PC_OE`, `MEM_RD`, `nMARH_LD`, `nSP_OE` |
+| 4 | `nPC_LD`, `PC_OE`, `nMPC_RST`, `nMAR_OE` |
+
+### 0x19 subOp 0x4 --> RETN
+
+| Step | Control bits |
+| ---- | ------------ |
+| 0 | `nIRH_LD`, `nIRL_LD`, `MEM_RD` |
+| 1 | `PC_INC`<br>if N: `PC_OE`, `nSP_INC`, `nSP_OE`<br>if NN: `nMPC_RST` |
+| 2 | `PC_OE`, `MEM_RD`, `nMARL_LD`, `nSP_INC`, `nSP_OE` |
+| 3 | `PC_OE`, `MEM_RD`, `nMARH_LD`, `nSP_OE` |
+| 4 | `nPC_LD`, `PC_OE`, `nMPC_RST`, `nMAR_OE` |
+
+### 0x19 subOp 0x5 --> RETNN
+
+| Step | Control bits |
+| ---- | ------------ |
+| 0 | `nIRH_LD`, `nIRL_LD`, `MEM_RD` |
+| 1 | `PC_INC`<br>if N: `nMPC_RST`<br>if NN: `PC_OE`, `nSP_INC`, `nSP_OE` |
+| 2 | `PC_OE`, `MEM_RD`, `nMARL_LD`, `nSP_INC`, `nSP_OE` |
+| 3 | `PC_OE`, `MEM_RD`, `nMARH_LD`, `nSP_OE` |
+| 4 | `nPC_LD`, `PC_OE`, `nMPC_RST`, `nMAR_OE` |
+
+### 0x19 subOp 0x6 --> RETV
+
+| Step | Control bits |
+| ---- | ------------ |
+| 0 | `nIRH_LD`, `nIRL_LD`, `MEM_RD` |
+| 1 | `PC_INC`<br>if V: `PC_OE`, `nSP_INC`, `nSP_OE`<br>if NV: `nMPC_RST` |
+| 2 | `PC_OE`, `MEM_RD`, `nMARL_LD`, `nSP_INC`, `nSP_OE` |
+| 3 | `PC_OE`, `MEM_RD`, `nMARH_LD`, `nSP_OE` |
+| 4 | `nPC_LD`, `PC_OE`, `nMPC_RST`, `nMAR_OE` |
+
+### 0x19 subOp 0x7 --> RETNV
+
+| Step | Control bits |
+| ---- | ------------ |
+| 0 | `nIRH_LD`, `nIRL_LD`, `MEM_RD` |
+| 1 | `PC_INC`<br>if V: `nMPC_RST`<br>if NV: `PC_OE`, `nSP_INC`, `nSP_OE` |
+| 2 | `PC_OE`, `MEM_RD`, `nMARL_LD`, `nSP_INC`, `nSP_OE` |
+| 3 | `PC_OE`, `MEM_RD`, `nMARH_LD`, `nSP_OE` |
+| 4 | `nPC_LD`, `PC_OE`, `nMPC_RST`, `nMAR_OE` |
+
+### 0x1A subOp 0x0 --> CALLC label
+
+| Step | Control bits |
+| ---- | ------------ |
+| 0 | `nIRH_LD`, `nIRL_LD`, `MEM_RD` |
+| 1 | `PC_INC`<br>if C: `nIRD_OE`, `nMARH_LD` |
+| 2 | if C: `nIRH_LD`, `nIRL_LD`, `MEM_RD`<br>if NC: `PC_INC`, `nMPC_RST` |
+| 3 | `PC_INC`, `nIRD_OE`, `nMARL_LD` |
+| 4 | `PC_OE`, `nPCH_OE`, `MEM_WR`, `nSP_INC`, `SP_DIR`, `nSP_OE` |
+| 5 | `PC_OE`, `nPCL_OE`, `MEM_WR`, `nSP_INC`, `SP_DIR`, `nSP_OE` |
+| 6 | `nPC_LD`, `PC_OE`, `nMPC_RST`, `nMAR_OE` |
+
+### 0x1A subOp 0x1 --> CALLNC label
+
+| Step | Control bits |
+| ---- | ------------ |
+| 0 | `nIRH_LD`, `nIRL_LD`, `MEM_RD` |
+| 1 | `PC_INC`<br>if NC: `nIRD_OE`, `nMARH_LD` |
+| 2 | if C: `PC_INC`, `nMPC_RST`<br>if NC: `nIRH_LD`, `nIRL_LD`, `MEM_RD` |
+| 3 | `PC_INC`, `nIRD_OE`, `nMARL_LD` |
+| 4 | `PC_OE`, `nPCH_OE`, `MEM_WR`, `nSP_INC`, `SP_DIR`, `nSP_OE` |
+| 5 | `PC_OE`, `nPCL_OE`, `MEM_WR`, `nSP_INC`, `SP_DIR`, `nSP_OE` |
+| 6 | `nPC_LD`, `PC_OE`, `nMPC_RST`, `nMAR_OE` |
+
+### 0x1A subOp 0x2 --> CALLZ label
+
+| Step | Control bits |
+| ---- | ------------ |
+| 0 | `nIRH_LD`, `nIRL_LD`, `MEM_RD` |
+| 1 | `PC_INC`<br>if Z: `nIRD_OE`, `nMARH_LD` |
+| 2 | if Z: `nIRH_LD`, `nIRL_LD`, `MEM_RD`<br>if NZ: `PC_INC`, `nMPC_RST` |
+| 3 | `PC_INC`, `nIRD_OE`, `nMARL_LD` |
+| 4 | `PC_OE`, `nPCH_OE`, `MEM_WR`, `nSP_INC`, `SP_DIR`, `nSP_OE` |
+| 5 | `PC_OE`, `nPCL_OE`, `MEM_WR`, `nSP_INC`, `SP_DIR`, `nSP_OE` |
+| 6 | `nPC_LD`, `PC_OE`, `nMPC_RST`, `nMAR_OE` |
+
+### 0x1A subOp 0x3 --> CALLNZ label
+
+| Step | Control bits |
+| ---- | ------------ |
+| 0 | `nIRH_LD`, `nIRL_LD`, `MEM_RD` |
+| 1 | `PC_INC`<br>if NZ: `nIRD_OE`, `nMARH_LD` |
+| 2 | if Z: `PC_INC`, `nMPC_RST`<br>if NZ: `nIRH_LD`, `nIRL_LD`, `MEM_RD` |
+| 3 | `PC_INC`, `nIRD_OE`, `nMARL_LD` |
+| 4 | `PC_OE`, `nPCH_OE`, `MEM_WR`, `nSP_INC`, `SP_DIR`, `nSP_OE` |
+| 5 | `PC_OE`, `nPCL_OE`, `MEM_WR`, `nSP_INC`, `SP_DIR`, `nSP_OE` |
+| 6 | `nPC_LD`, `PC_OE`, `nMPC_RST`, `nMAR_OE` |
+
+### 0x1A subOp 0x4 --> CALLN label
+
+| Step | Control bits |
+| ---- | ------------ |
+| 0 | `nIRH_LD`, `nIRL_LD`, `MEM_RD` |
+| 1 | `PC_INC`<br>if N: `nIRD_OE`, `nMARH_LD` |
+| 2 | if N: `nIRH_LD`, `nIRL_LD`, `MEM_RD`<br>if NN: `PC_INC`, `nMPC_RST` |
+| 3 | `PC_INC`, `nIRD_OE`, `nMARL_LD` |
+| 4 | `PC_OE`, `nPCH_OE`, `MEM_WR`, `nSP_INC`, `SP_DIR`, `nSP_OE` |
+| 5 | `PC_OE`, `nPCL_OE`, `MEM_WR`, `nSP_INC`, `SP_DIR`, `nSP_OE` |
+| 6 | `nPC_LD`, `PC_OE`, `nMPC_RST`, `nMAR_OE` |
+
+### 0x1A subOp 0x5 --> CALLNN label
+
+| Step | Control bits |
+| ---- | ------------ |
+| 0 | `nIRH_LD`, `nIRL_LD`, `MEM_RD` |
+| 1 | `PC_INC`<br>if NN: `nIRD_OE`, `nMARH_LD` |
+| 2 | if N: `PC_INC`, `nMPC_RST`<br>if NN: `nIRH_LD`, `nIRL_LD`, `MEM_RD` |
+| 3 | `PC_INC`, `nIRD_OE`, `nMARL_LD` |
+| 4 | `PC_OE`, `nPCH_OE`, `MEM_WR`, `nSP_INC`, `SP_DIR`, `nSP_OE` |
+| 5 | `PC_OE`, `nPCL_OE`, `MEM_WR`, `nSP_INC`, `SP_DIR`, `nSP_OE` |
+| 6 | `nPC_LD`, `PC_OE`, `nMPC_RST`, `nMAR_OE` |
+
+### 0x1A subOp 0x6 --> CALLV label
+
+| Step | Control bits |
+| ---- | ------------ |
+| 0 | `nIRH_LD`, `nIRL_LD`, `MEM_RD` |
+| 1 | `PC_INC`<br>if V: `nIRD_OE`, `nMARH_LD` |
+| 2 | if V: `nIRH_LD`, `nIRL_LD`, `MEM_RD`<br>if NV: `PC_INC`, `nMPC_RST` |
+| 3 | `PC_INC`, `nIRD_OE`, `nMARL_LD` |
+| 4 | `PC_OE`, `nPCH_OE`, `MEM_WR`, `nSP_INC`, `SP_DIR`, `nSP_OE` |
+| 5 | `PC_OE`, `nPCL_OE`, `MEM_WR`, `nSP_INC`, `SP_DIR`, `nSP_OE` |
+| 6 | `nPC_LD`, `PC_OE`, `nMPC_RST`, `nMAR_OE` |
+
+### 0x1A subOp 0x7 --> CALLNV label
+
+| Step | Control bits |
+| ---- | ------------ |
+| 0 | `nIRH_LD`, `nIRL_LD`, `MEM_RD` |
+| 1 | `PC_INC`<br>if NV: `nIRD_OE`, `nMARH_LD` |
+| 2 | if V: `PC_INC`, `nMPC_RST`<br>if NV: `nIRH_LD`, `nIRL_LD`, `MEM_RD` |
+| 3 | `PC_INC`, `nIRD_OE`, `nMARL_LD` |
+| 4 | `PC_OE`, `nPCH_OE`, `MEM_WR`, `nSP_INC`, `SP_DIR`, `nSP_OE` |
+| 5 | `PC_OE`, `nPCL_OE`, `MEM_WR`, `nSP_INC`, `SP_DIR`, `nSP_OE` |
+| 6 | `nPC_LD`, `PC_OE`, `nMPC_RST`, `nMAR_OE` |
 
 ### 0x1B subOp 0x0 --> JC label
 
@@ -532,6 +848,14 @@ Step 0 is the fetch, and it's the same in every instruction. When a step depends
 | 2 | `PC_OE`, `MEM_RD`, `nMARL_LD`, `nSP_INC`, `nSP_OE` |
 | 3 | `PC_OE`, `MEM_RD`, `nMARH_LD`, `nSP_OE` |
 | 4 | `nPC_LD`, `PC_OE`, `nMPC_RST`, `nMAR_OE` |
+
+### 0x1F subOp 0x2 --> LDT A, XY+
+
+| Step | Control bits |
+| ---- | ------------ |
+| 0 | `nIRH_LD`, `nIRL_LD`, `MEM_RD` |
+| 1 | `PC_INC`, `PC_OE`, `nIRL_LD`, `nXYA_OE`, `MEM_RD` |
+| 2 | `nIRD_OE`, `nMPC_RST`, `nXY_INC`, `nA_LD` |
 
 ### 0x1F subOp 0x5 --> PUSHF
 

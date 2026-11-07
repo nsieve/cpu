@@ -80,12 +80,11 @@ def check_condition(sub_opcode, z, c, n, v):
 
 # (base opcode, subOp) pairs with no instruction. they end at step 1, so they work as a NOP
 FREE_SLOTS = (
-    {(2, 6), (2, 7)} |
     {(3, sub) for sub in range(2, 8)} |
     {(29, 6), (29, 7)} |
     {(30, 5)} |
-    {(31, 2), (31, 3), (31, 4)} |
-    {(base, sub) for base in (14, 15, 16, 17, 18, 19, 20, 25, 26) for sub in range(8)}  # the old ALU opcodes
+    {(31, 3), (31, 4)} |
+    {(base, sub) for base in (18, 19, 20) for sub in range(8)}  # old ALU opcodes nothing uses yet
 )
 
 
@@ -148,6 +147,12 @@ def gen_microcode():
                 elif sub_opcode == 5: # DEC XY
                     if microstep == 1:
                         control_word |= (1 << nXY_INC) | (1 << XY_DIR) | (1 << nMPC_RST)
+                elif sub_opcode == 6: # ST XY+, reg: XY only counts on the clock edge, so the write uses the old XY
+                    if microstep == 1:
+                        control_word |= (1 << PC_OE) | (1 << nXYA_OE) | (1 << MEM_WR) | (1 << REG_OE) | (1 << nXY_INC) | (1 << nMPC_RST)
+                elif sub_opcode == 7: # ST MAR+, reg
+                    if microstep == 1:
+                        control_word |= (1 << PC_OE) | (1 << nMAR_OE) | (1 << MEM_WR) | (1 << REG_OE) | (1 << nMAR_INC) | (1 << nMPC_RST)
 
             elif base_opcode == 3:
                 if sub_opcode == 0: # MOV MARL, REG
@@ -191,13 +196,17 @@ def gen_microcode():
                 elif microstep == 2:
                     control_word |= (1 << PC_OE) | (1 << REG_LD) | (1 << nSP_OE) | (1 << MEM_RD) | (1 << nMPC_RST)
 
-            elif base_opcode in (12, 13):  # ALU A, REG (12) and ALU A, Imm (13): the subop is the operation
+            elif base_opcode in (12, 13, 14, 15):  # ALU A, REG (12), Imm (13), [zp] (14) and [XY] (15): the subop is the operation
                 if microstep == 1:
-                    # the operand: a register ([7:5]) or the immediate (IR[7:0])
+                    # the operand: a register ([7:5]), the immediate (IR[7:0]), or memory at 0x00:IR[7:0] or at XY
                     if base_opcode == 12:
                         control_word |= (1 << REG_OE)
-                    else:
+                    elif base_opcode == 13:
                         control_word |= (1 << nIRD_OE)
+                    elif base_opcode == 14:
+                        control_word |= (1 << PC_OE) | (1 << nIRA_OE) | (1 << nHBA_OE) | (1 << MEM_RD)
+                    else:
+                        control_word |= (1 << PC_OE) | (1 << nXYA_OE) | (1 << MEM_RD)
                     # the result goes into A with nA_LD, which doesn't go through the register file's
                     # decoder, so [10:8] can be the subop. CP only loads the flags
                     if sub_opcode != 7:
@@ -228,6 +237,14 @@ def gen_microcode():
                     elif sub_opcode == 7: # CP: A - B, only the flags
                         control_word |= (1 << ALU_S1) | (1 << ALU_CIN)
 
+            elif base_opcode == 16:  # LD reg, XY+ (A-F only: X and Y can't load while XY counts)
+                if microstep == 1:
+                    control_word |= (1 << PC_OE) | (1 << nXYA_OE) | (1 << MEM_RD) | (1 << REG_LD) | (1 << nXY_INC) | (1 << nMPC_RST)
+
+            elif base_opcode == 17:  # LD reg, MAR+
+                if microstep == 1:
+                    control_word |= (1 << PC_OE) | (1 << nMAR_OE) | (1 << MEM_RD) | (1 << REG_LD) | (1 << nMAR_INC) | (1 << nMPC_RST)
+
             elif base_opcode == 21:  # INC A
                 if microstep == 1:
                     control_word |= (1 << ALU_S0) | (1 << ALU_S1) | (1 << ALU_CIN) | (1 << nIRD_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFLZN_LD) | (1 << nFLCV_LD) | (1 << nMPC_RST)
@@ -245,6 +262,36 @@ def gen_microcode():
                     control_word |= (1 << nSHR_OE) | (1 << REG_LD) | (1 << nMPC_RST)
                     if c_flag:
                         control_word |= (1 << SHR_IN0)
+
+            elif base_opcode == 25:  # RET cc: a RET if the condition is true, otherwise it ends at step 1
+                if take_jump:
+                    if microstep == 1:
+                        control_word |= (1 << PC_OE) | (1 << nSP_OE) | (1 << nSP_INC)
+                    elif microstep == 2:
+                        control_word |= (1 << PC_OE) | (1 << nMARL_LD) | (1 << nSP_OE) | (1 << nSP_INC) | (1 << MEM_RD)
+                    elif microstep == 3:
+                        control_word |= (1 << PC_OE) | (1 << nMARH_LD) | (1 << nSP_OE) | (1 << MEM_RD)
+                    elif microstep == 4:
+                        control_word |= (1 << PC_OE) | (1 << nPC_LD) | (1 << nMAR_OE) | (1 << nMPC_RST)
+                elif microstep == 1:
+                    control_word |= (1 << nMPC_RST)
+
+            elif base_opcode == 26:  # CALL cc imm16: a CALL if the condition is true, otherwise it skips the second word like JCC
+                if take_jump:
+                    if microstep == 1: # load high byte into marh (and pc++ automatically)
+                        control_word |= (1 << nIRD_OE) | (1 << nMARH_LD)
+                    elif microstep == 2: # read second word and store in instruction register
+                        control_word |= (1 << MEM_RD) | (1 << nIRH_LD) | (1 << nIRL_LD)
+                    elif microstep == 3: # load low byte into marl and pc++ (pc is now the return address)
+                        control_word |= (1 << nIRD_OE) | (1 << nMARL_LD) | (1 << PC_INC)
+                    elif microstep == 4: # push PCH
+                        control_word |= (1 << PC_OE) | (1 << nPCH_OE) | (1 << nSP_OE) | (1 << nSP_INC) | (1 << SP_DIR) | (1 << MEM_WR)
+                    elif microstep == 5: # push PCL
+                        control_word |= (1 << PC_OE) | (1 << nPCL_OE) | (1 << nSP_OE) | (1 << nSP_INC) | (1 << SP_DIR) | (1 << MEM_WR)
+                    elif microstep == 6: # load destination from MAR into PC
+                        control_word |= (1 << PC_OE) | (1 << nPC_LD) | (1 << nMAR_OE) | (1 << nMPC_RST)
+                elif microstep == 2: # not taken: skip the second word and finish (3 cycles total)
+                    control_word |= (1 << PC_INC) | (1 << nMPC_RST)
 
             elif base_opcode == 27:  # JCC imm16
                 take_jump = check_condition(sub_opcode, z_flag, c_flag, n_flag, v_flag)
@@ -360,6 +407,12 @@ def gen_microcode():
                         control_word |= (1 << PC_OE) | (1 << nMARH_LD) | (1 << nSP_OE) | (1 << MEM_RD)
                     elif microstep == 4:
                         control_word |= (1 << PC_OE) | (1 << nPC_LD) | (1 << nMAR_OE) | (1 << nMPC_RST)
+
+                elif sub_opcode == 2: # LDT A, XY+: LDT, and XY + 1 at the end
+                    if microstep == 1:
+                        control_word |= (1 << PC_OE) | (1 << nXYA_OE) | (1 << MEM_RD) | (1 << nIRL_LD)
+                    elif microstep == 2: # [10:8] is 2 here, so REG_LD would load C: A loads with nA_LD instead
+                        control_word |= (1 << nIRD_OE) | (1 << nA_LD) | (1 << nXY_INC) | (1 << nMPC_RST)
 
                 elif sub_opcode == 5: # PUSHF
                     if microstep == 1:

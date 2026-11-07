@@ -60,6 +60,8 @@ The strobes stay active-low all the way to the chips:
 
 The memory only gets half a cycle to answer: the EPROM access time plus the address decoding has to fit in half a clock period. At breadboard speeds that's easy.
 
+Since the ALU can also take its operand from memory (`SUB A, [var]` and `SUB A, [XY]`), that half cycle has to fit the ALU too: the RAM answers, then the two 74382, the A mux and the flags have to settle before the rising edge. That's the longest path in the CPU now, so it's the one that sets the fastest clock, but at breadboard speeds there's still plenty of time.
+
 There's one thing to check on the breadboard. A write now ends exactly on the rising edge, the same moment the address and the data start changing for the next step. It's a race between the delay of the 7400 (about 10 ns), which turns `nMEM_WR` off, and the delay of the registers that change the address (about 30 ns for a 74HC191), so the write should end first. The same goes for the 74377 in the MMIO, which latch their data when their clock goes back up, at the end of the write, with the 7432 adding a few more ns. SRAMs usually need 0 ns of address hold time, so it should work, but it's worth checking against the datasheets of the chips I actually use. Before the gating it was worse: the write ended an EPROM access time after the edge, when the address had already changed.
 
 ### Idea: Active-Low Control Bits
