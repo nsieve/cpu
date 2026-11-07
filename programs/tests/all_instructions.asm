@@ -159,6 +159,18 @@ START:
     CP A, 0x06
     PUSHF
     ST 0x31, A
+    MOV A, 0x10
+    SUB A, 0x11             ; borrows: C = 0
+    PUSHF
+    SBC A, 0x01             ; 0xFF - 1 - 1
+    PUSHF
+    ADC A, 0x7F             ; 0xFD + 0x7F (+ C)
+    PUSHF
+    OR A, 0x81
+    PUSHF
+    XOR A, 0xFF             ; C and V stay from the ADC
+    PUSHF
+    ST 0x3C, A
 
     ; ---- INC / DEC ----
     MOV A, 0x7F

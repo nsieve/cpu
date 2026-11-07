@@ -220,25 +220,18 @@ def encode_instruction(mnemonic, tokens, symbol_table):
     if mnemonic == "SHR" and tokens[0] == "A": return (0x17 << 11)
     if mnemonic == "ROR" and tokens[0] == "A": return (0x18 << 11)
 
-    alu_map = {
-        "ADD": (0x0C, 0x0D),
-        "ADC": (0x0E, None),
-        "SUB": (0x0F, None),
-        "SBC": (0x10, None),
-        "AND": (0x11, 0x12),
-        "OR":  (0x13, None),
-        "XOR": (0x14, None),
-        "CP":  (0x19, 0x1A)
-    }
+    # ALU A, REG (0x0C) and ALU A, Imm (0x0D): the subop is the operation
+    alu_subops = {"ADD": 0, "ADC": 1, "SUB": 2, "SBC": 3, "AND": 4, "OR": 5, "XOR": 6, "CP": 7}
 
-    if mnemonic in alu_map:
-        reg_op, imm_op = alu_map[mnemonic]
+    if mnemonic in alu_subops:
+        if len(tokens) != 2 or tokens[0] != "A":
+            raise SyntaxError(f"{mnemonic} only works on A: {mnemonic} A, REG or {mnemonic} A, Imm")
+        subop = alu_subops[mnemonic]
         src = tokens[1]
         if src in REGISTER_MAP:
-            return (reg_op << 11) | (reg(src) << 5)
-        elif imm_op is not None:
-            val = imm8(src, symbol_table)
-            return (imm_op << 11) | (val & 0xFF)
+            return (0x0C << 11) | (subop << 8) | (reg(src) << 5)
+        val = imm8(src, symbol_table)
+        return (0x0D << 11) | (subop << 8) | (val & 0xFF)
 
     raise SyntaxError(f"Unknown instruction or invalid format: {mnemonic} {' '.join(tokens)}")
 

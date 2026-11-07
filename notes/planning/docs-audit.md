@@ -32,7 +32,7 @@ Verification is missing from every module doc, but that one's easy now: each mod
 | ---- | ----- | ------- | ------------------ | --- |
 | Outdated | Highlights | 77 logic chips so far | The simulation has 80 74xx chips (whole chips per module, plus 7 generic gates). The real count, with gates shared between modules, will be lower | update the number, or say it's the simulation count |
 
-Checked and right: 32 opcodes and 66 instructions (the `isa.md` table), 43 control bits, up to 16 steps, most instructions in 2 cycles, the description of the fetch and the address bus sources, and the Running It steps (`gen_docs.py` does warn about `isa.md`, and the generated docs are up to date).
+Checked and right: 72 instructions in 23 opcodes (the `isa.md` table), 43 control bits, up to 16 steps, most instructions in 2 cycles, the description of the fetch and the address bus sources, and the Running It steps (`gen_docs.py` does warn about `isa.md`, and the generated docs are up to date).
 
 ## Hardware Design
 
@@ -52,12 +52,12 @@ Fixed today, it matches `ADDR_DEC.dig` (the 3 equations, gate 3 of the 7400 free
 
 | Kind | Where | It says | The circuit / code | Fix |
 | ---- | ----- | ------- | ------------------ | --- |
-| Wrong | Overview, last bullet | the accumulator goes to 3 buffers: normal output, shift right, and roll right through carry | There are 2 buffers from the accumulator: A itself (`A_OE`) and the shifter (`nSHR`). The third 74245 is the ALU result (`nALU_OE`). There's no separate ROR buffer | "2 buffers from A (normal and shifted right) and one for the ALU result" |
+| Wrong | Overview, last bullet | the accumulator goes to 3 buffers: normal output, shift right, and roll right through carry | There are 2 buffers, both from the accumulator: A itself (`A_OE`) and the shifter (`nSHR_OE`). There's no separate ROR buffer, and the ALU result has no buffer to the bus anymore | "2 buffers from A (normal and shifted right)" |
 | Wrong | Datapath Routing, ROR row | Shift MUX (D7) driven to `C_FLAG` | Bit 7 of the shifter is `SHR_IN0`, a control bit (bit 30), not the C flag | "driven by `SHR_IN0`". A ROR through carry can still be done in microcode only: the microcode address has C, so ROR can set `SHR_IN0` only when C = 1. The shifted-out bit going into C would need hardware, though |
 | Outdated | 74382 table | ADI, CPI, ANI | The ISA calls them `ADD A, Imm`, `CP A, Imm`, `AND A, Imm` (old mnemonics) | rename |
 | Unclear | 74382 table | Cin = X for AND/OR/XOR | The microcode leaves `ALU_CIN` at 0. It doesn't change the result, but it does change the C and V that get loaded | "0" |
 | Unclear | Datapath Routing, INC/DEC row | B-input source: force 0 | Nothing forces it: the IR puts its low byte on the data bus (`nIRD_OE`), and the assembler leaves it at `0x00` (`issues.md` has it as a limitation) | "the IR's low byte (0x00)" |
-| Unclear | Datapath Routing | the output bus source of ALU operations is the 74382 outputs | The result goes into A through the 74257 mux (`A_SEL = 1`). `nALU_OE` (ALU result to the bus) is never used by the microcode | say the result goes back into A, not to the bus |
+| Unclear | Datapath Routing | the output bus source of ALU operations is the 74382 outputs | The result goes into A through the 74257 mux (`A_SEL = 1`), it never goes to the bus (that 74245 and `nALU_OE` were removed) | say the result goes back into A, not to the bus |
 | Missing | Flags | - | After a subtraction (and CP), C = 1 means no borrow (A >= B unsigned), because the 74382 does A + NOT(B) + 1. That's what `JC`/`JNC` see | add it |
 | Missing | Flags | - | AND/OR/XOR also load C and V (`issues.md`) | a line pointing to the issue |
 | Missing | whole doc | - | The accumulator (two 74173, cleared by `RST`), the 74257 input mux (`A_SEL`), `A_LD`/`A_OE` being active low and coming from the register file's decoders, a pin table and a chip table | template sections 1, 3 and 6 |
@@ -115,7 +115,7 @@ Everything matches `IR.dig` (2 74377, 2 74245, the fields and the signals). Miss
 
 ### reset.md
 
-Everything else matches: the 7474 synchronizer (the module test checks the press, the hold, the release and a short press), the PC gates, the control unit, and the table of inactive EPROM words (`0x2FFA`, `0xA878`, `0x05EB` are exactly `active_low_mask`).
+Everything else matches: the 7474 synchronizer (the module test checks the press, the hold, the release and a short press), the PC gates, the control unit, and the table of inactive EPROM words (`0x2FFA`, `0xA0F8`, `0x05EB` are exactly `active_low_mask`).
 
 | Kind | Where | It says | The circuit / code | Fix |
 | ---- | ----- | ------- | ------------------ | --- |

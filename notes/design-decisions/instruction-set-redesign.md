@@ -44,7 +44,7 @@ The sub-opcodes weren't planned from the start. When the 32 slots started to run
 - In instructions like `MOV REG, Imm` or `LD REG, MAR`, they are the destination register. The register file decodes them in hardware, and the microcode is the same for all 8 values.
 - In instructions that don't need a register, they're a sub-opcode, and the microcode does something different for each value. For example, `0x02` is `MOV MARL, Imm`, `MOV MARH, Imm`, `INC MAR`, `DEC MAR`, `INC XY` or `DEC XY` depending on the sub-opcode, and `0x1B` uses them as the condition of the jump (C, NC, Z, NZ, ...).
 
-The sub-opcodes don't need any extra decoding hardware, since the EPROM address already includes those bits. Thanks to this, the 32 base opcodes hold 66 instructions, and there are still free slots left. The full list is in `opcodes&microinstructions/isa.md`.
+The sub-opcodes don't need any extra decoding hardware, since the EPROM address already includes those bits. Thanks to this, the 32 base opcodes hold 72 instructions, and there are still free slots left. The full list is in `opcodes&microinstructions/isa.md`.
 
 ### The Downside
 

@@ -31,11 +31,11 @@ Bits that start with `n` are active-low. The programmer writes every bit inactiv
 | 20 | `nMARH_LD` | 2 | D4 | low | load from data bus into the higher byte of the MAR |
 | 21 | `nMAR_OE` | 2 | D5 | low | output the MAR to the address bus |
 | 22 | `nMAR_INC` | 2 | D6 | low | increment the MAR register |
-| 23 | `A_SEL` | 2 | D7 | high | multiplexor selector for the input of the accumulator. 0 = data bus, 1 = alu |
-| 24 | `ALU_S0` | 2 | D8 | high | alu select line 0 |
-| 25 | `ALU_S1` | 2 | D9 | high | alu select line 1 |
-| 26 | `ALU_S2` | 2 | D10 | high | alu select line 2 |
-| 27 | `nALU_OE` | 2 | D11 | low | output the result of the alu to the data bus |
+| 23 | `nA_LD` | 2 | D7 | low | loads A without the register file's decoder (ALU operations, so [10:8] can be the subop) |
+| 24 | `A_SEL` | 2 | D8 | high | multiplexor selector for the input of the accumulator. 0 = data bus, 1 = alu |
+| 25 | `ALU_S0` | 2 | D9 | high | alu select line 0 |
+| 26 | `ALU_S1` | 2 | D10 | high | alu select line 1 |
+| 27 | `ALU_S2` | 2 | D11 | high | alu select line 2 |
 | 28 | `ALU_CIN` | 2 | D12 | high | carry in on the lowest alu chip |
 | 29 | `nSHR_OE` | 2 | D13 | low | output a shift right of the accumulator |
 | 30 | `SHR_IN0` | 2 | D14 | high | bit 7 of the shifted value (0 for SHR, the old C for ROR) |

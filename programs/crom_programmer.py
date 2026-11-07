@@ -26,11 +26,11 @@ nMARL_LD = 19   # load from data bus into the lower byte of the MAR
 nMARH_LD = 20   # load from data bus into the higher byte of the MAR
 nMAR_OE  = 21   # output the MAR to the address bus
 nMAR_INC = 22   # increment the MAR register
-A_SEL    = 23   # multiplexor selector for the input of the accumulator. 0 = data bus, 1 = alu
-ALU_S0   = 24   # alu select line 0
-ALU_S1   = 25   # alu select line 1
-ALU_S2   = 26   # alu select line 2
-nALU_OE  = 27   # output the result of the alu to the data bus
+nA_LD    = 23   # loads A without the register file's decoder (ALU operations, so [10:8] can be the subop)
+A_SEL    = 24   # multiplexor selector for the input of the accumulator. 0 = data bus, 1 = alu
+ALU_S0   = 25   # alu select line 0
+ALU_S1   = 26   # alu select line 1
+ALU_S2   = 27   # alu select line 2
 ALU_CIN  = 28   # carry in on the lowest alu chip
 nSHR_OE  = 29   # output a shift right of the accumulator
 SHR_IN0  = 30   # bit 7 of the shifted value (0 for SHR, the old C for ROR)
@@ -57,7 +57,7 @@ active_low_mask = (
     (1 << nIRA_OE)  | (1 << nHBA_OE)  | (1 << nMPC_RST)  |
     (1 << nMARL_LD) | (1 << nMARH_LD) | (1 << nMAR_OE)   |
     (1 << nMAR_INC) | (1 << nXY_INC)  | (1 << nXYA_OE)   |
-    (1 << nALU_OE)  | (1 << nSHR_OE)  | (1 << nFL_OE)    |
+    (1 << nA_LD)    | (1 << nSHR_OE)  | (1 << nFL_OE)    |
     (1 << nFLZN_LD) | (1 << nFLCV_LD) | (1 << nSP_INC)   |
     (1 << nSP_LD)   | (1 << nSP_OE)   | (1 << nSPL_OE)   |
     (1 << nSPH_OE)  | (1 << nHALT)
@@ -84,7 +84,8 @@ FREE_SLOTS = (
     {(3, sub) for sub in range(2, 8)} |
     {(29, 6), (29, 7)} |
     {(30, 5)} |
-    {(31, 2), (31, 3), (31, 4)}
+    {(31, 2), (31, 3), (31, 4)} |
+    {(base, sub) for base in (14, 15, 16, 17, 18, 19, 20, 25, 26) for sub in range(8)}  # the old ALU opcodes
 )
 
 
@@ -190,45 +191,42 @@ def gen_microcode():
                 elif microstep == 2:
                     control_word |= (1 << PC_OE) | (1 << REG_LD) | (1 << nSP_OE) | (1 << MEM_RD) | (1 << nMPC_RST)
 
-            elif base_opcode == 12:  # ADD A, reg
+            elif base_opcode in (12, 13):  # ALU A, REG (12) and ALU A, Imm (13): the subop is the operation
                 if microstep == 1:
-                    control_word |= (1 << ALU_S0) | (1 << ALU_S1) | (1 << REG_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFLZN_LD) | (1 << nFLCV_LD) | (1 << nMPC_RST)
+                    # the operand: a register ([7:5]) or the immediate (IR[7:0])
+                    if base_opcode == 12:
+                        control_word |= (1 << REG_OE)
+                    else:
+                        control_word |= (1 << nIRD_OE)
+                    # the result goes into A with nA_LD, which doesn't go through the register file's
+                    # decoder, so [10:8] can be the subop. CP only loads the flags
+                    if sub_opcode != 7:
+                        control_word |= (1 << A_SEL) | (1 << nA_LD)
+                    # every ALU operation loads Z and N, and the arithmetic ones also C and V
+                    control_word |= (1 << nFLZN_LD) | (1 << nMPC_RST)
+                    if sub_opcode in (0, 1, 2, 3, 7):
+                        control_word |= (1 << nFLCV_LD)
 
-            elif base_opcode == 13:  # ADD A, imm8
-                if microstep == 1:
-                    control_word |= (1 << ALU_S0) | (1 << ALU_S1) | (1 << nIRD_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFLZN_LD) | (1 << nFLCV_LD) | (1 << nMPC_RST)
-
-            elif base_opcode == 14:  # ADC A, reg
-                if microstep == 1:
-                    control_word |= (1 << ALU_S0) | (1 << ALU_S1) | (1 << REG_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFLZN_LD) | (1 << nFLCV_LD) | (1 << nMPC_RST)
-                    if c_flag:
-                        control_word |= (1 << ALU_CIN)
-
-            elif base_opcode == 15:  # SUB A, reg
-                if microstep == 1:
-                    control_word |= (1 << ALU_S1) | (1 << ALU_CIN) | (1 << REG_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFLZN_LD) | (1 << nFLCV_LD) | (1 << nMPC_RST)
-
-            elif base_opcode == 16:  # SBC A, reg
-                if microstep == 1:
-                    control_word |= (1 << ALU_S1) | (1 << REG_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFLZN_LD) | (1 << nFLCV_LD) | (1 << nMPC_RST)
-                    if c_flag:
-                        control_word |= (1 << ALU_CIN)
-
-            elif base_opcode == 17:  # AND A, reg (the logic operations only load Z and N, C and V keep their value)
-                if microstep == 1:
-                    control_word |= (1 << ALU_S1) | (1 << ALU_S2) | (1 << REG_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFLZN_LD) | (1 << nMPC_RST)
-
-            elif base_opcode == 18:  # AND A, imm8
-                if microstep == 1:
-                    control_word |= (1 << ALU_S1) | (1 << ALU_S2) | (1 << nIRD_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFLZN_LD) | (1 << nMPC_RST)
-
-            elif base_opcode == 19:  # OR A, reg
-                if microstep == 1:
-                    control_word |= (1 << ALU_S0) | (1 << ALU_S2) | (1 << REG_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFLZN_LD) | (1 << nMPC_RST)
-
-            elif base_opcode == 20:  # XOR A, reg
-                if microstep == 1:
-                    control_word |= (1 << ALU_S2) | (1 << REG_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFLZN_LD) | (1 << nMPC_RST)
+                    if sub_opcode == 0:   # ADD: A + B
+                        control_word |= (1 << ALU_S0) | (1 << ALU_S1)
+                    elif sub_opcode == 1: # ADC: A + B + C
+                        control_word |= (1 << ALU_S0) | (1 << ALU_S1)
+                        if c_flag:
+                            control_word |= (1 << ALU_CIN)
+                    elif sub_opcode == 2: # SUB: A - B (A + not B + 1)
+                        control_word |= (1 << ALU_S1) | (1 << ALU_CIN)
+                    elif sub_opcode == 3: # SBC: A - B - 1 + C
+                        control_word |= (1 << ALU_S1)
+                        if c_flag:
+                            control_word |= (1 << ALU_CIN)
+                    elif sub_opcode == 4: # AND
+                        control_word |= (1 << ALU_S1) | (1 << ALU_S2)
+                    elif sub_opcode == 5: # OR
+                        control_word |= (1 << ALU_S0) | (1 << ALU_S2)
+                    elif sub_opcode == 6: # XOR
+                        control_word |= (1 << ALU_S2)
+                    elif sub_opcode == 7: # CP: A - B, only the flags
+                        control_word |= (1 << ALU_S1) | (1 << ALU_CIN)
 
             elif base_opcode == 21:  # INC A
                 if microstep == 1:
@@ -247,14 +245,6 @@ def gen_microcode():
                     control_word |= (1 << nSHR_OE) | (1 << REG_LD) | (1 << nMPC_RST)
                     if c_flag:
                         control_word |= (1 << SHR_IN0)
-
-            elif base_opcode == 25:  # CP A, reg
-                if microstep == 1:
-                    control_word |= (1 << ALU_S1) | (1 << ALU_CIN) | (1 << REG_OE) | (1 << nFLZN_LD) | (1 << nFLCV_LD) | (1 << nMPC_RST)
-
-            elif base_opcode == 26:  # CP A, imm
-                if microstep == 1:
-                    control_word |= (1 << ALU_S1) | (1 << ALU_CIN) | (1 << nIRD_OE) | (1 << nFLZN_LD) | (1 << nFLCV_LD) | (1 << nMPC_RST)
 
             elif base_opcode == 27:  # JCC imm16
                 take_jump = check_condition(sub_opcode, z_flag, c_flag, n_flag, v_flag)

@@ -12,7 +12,7 @@ An 8-bit CPU designed from scratch and built entirely from 74HC logic chips.
 
 - 8-bit data bus, 16-bit address bus (64 KB of memory)
 - Von Neumann, accumulator-based architecture
-- 32 opcodes that expand to 66 instructions using sub-opcodes
+- 72 instructions in 23 of the 32 opcodes, using sub-opcodes (the other 9 opcodes are still free)
 - Microprogrammed control unit: 43 control bits on three 16-bit EPROMs, up to 16 microsteps per instruction
 - Most instructions take 2 cycles, because the fetch of the next instruction overlaps with the execution of the current one
 - 47.75 KB of RAM (1 KB of it for the framebuffer), 16 KB of ROM and 256 bytes of memory-mapped I/O
@@ -77,6 +77,7 @@ Design decisions:
 
 - [Instruction Set Redesign](notes/design-decisions/instruction-set-redesign.md)
 - [ST Zero-Page Source Register](notes/design-decisions/st-zeropage.md)
+- [ALU Operations as Sub-Opcodes (Direct A Load)](notes/design-decisions/alu-subops.md)
 - [Fetch-Execute Overlap](notes/design-decisions/fetch-execute-overlap.md)
 - [Direct Jumps](notes/design-decisions/jumps.md)
 - [74191 Load Synchronization](notes/design-decisions/74191-loadsync.md)

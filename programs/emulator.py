@@ -194,10 +194,10 @@ def disassemble(word, next_word=None):
     if op == 0x09: return f"ST XY, {rs}"
     if op == 0x0A: return f"PUSH {rs}"
     if op == 0x0B: return f"POP {rd}"
-    alu = {0x0C: "ADD", 0x0E: "ADC", 0x0F: "SUB", 0x10: "SBC", 0x11: "AND", 0x13: "OR", 0x14: "XOR", 0x19: "CP"}
-    if op in alu: return f"{alu[op]} A, {rs}"
-    alu_imm = {0x0D: "ADD", 0x12: "AND", 0x1A: "CP"}
-    if op in alu_imm: return f"{alu_imm[op]} A, 0x{imm:02X}"
+    alu = ["ADD", "ADC", "SUB", "SBC", "AND", "OR", "XOR", "CP"]      # the subop of 0x0C and 0x0D
+    if op == 0x0C: return f"{alu[sub]} A, {rs}"
+    if op == 0x0D: return f"{alu[sub]} A, 0x{imm:02X}"
+    if op in (0x0E, 0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x19, 0x1A): return free
     if op in (0x15, 0x16, 0x17, 0x18): return ["INC", "DEC", "SHR", "ROR"][op - 0x15] + " A"
     if op == 0x1B: return f"J{CONDITIONS[sub]} {target}"
     if op == 0x1C: return f"J{CONDITIONS[sub]} XY"
@@ -281,13 +281,11 @@ def gen_step(cw):
     if on(cp.nFL_OE): drivers.append(("flags", "(c.flags & 9 | (c.flags & 2) << 1 | (c.flags & 4) >> 1)"))
     if on(cp.nSPL_OE): drivers.append(("SPL", "c.sp & 0xFF"))
     if on(cp.nSPH_OE): drivers.append(("SPH", "c.sp >> 8"))
-    if on(cp.nALU_OE):
-        problems.append("nALU_OE puts the ALU result on the data bus, but the ALU's B input reads the data bus (a loop)")
     if len(drivers) > 1:
         problems.append(f"the data bus is driven by {' and '.join(d for d, _ in drivers)} at once")
 
-    alu_used = (on(cp.REG_LD) and on(cp.A_SEL)) or (fl_mask and not on(cp.FL_SEL))
-    data_used = (on(cp.REG_LD) or on(cp.nMARL_LD) or on(cp.nMARH_LD) or on(cp.MEM_WR)
+    alu_used = ((on(cp.REG_LD) or on(cp.nA_LD)) and on(cp.A_SEL)) or (fl_mask and not on(cp.FL_SEL))
+    data_used = (on(cp.REG_LD) or on(cp.nA_LD) or on(cp.nMARL_LD) or on(cp.nMARH_LD) or on(cp.MEM_WR)
                  or (fl_mask and on(cp.FL_SEL)) or alu_used)
     if on(cp.MEM_RD):
         if drivers:
@@ -370,6 +368,15 @@ def gen_step(cw):
         else:
             code.append("c.r[d] = dbus")
             desc.append("{r108} <- data")
+    if on(cp.nA_LD):     # A loads without the register file's decoder ([10:8] doesn't matter)
+        if on(cp.REG_LD):
+            problems.append("REG_LD and nA_LD at once")
+        if on(cp.A_SEL):
+            code.append("c.r[0] = res")
+            desc.append("A <- ALU")
+        else:
+            code.append("c.r[0] = dbus")
+            desc.append("A <- data")
     if on(cp.nXY_INC):
         if on(cp.REG_LD):
             problems.append("REG_LD and nXY_INC at once")

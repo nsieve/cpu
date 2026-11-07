@@ -9,7 +9,6 @@
 
 Things that came up while writing the first programs (Fibonacci, primes, the MAX7219 driver):
 
-- ALU operations with an immediate: only `ADD`, `AND` and `CP` have one, so subtracting a constant takes `MOV B, Imm` + `SUB A, B`. `OR`/`XOR` with an immediate are also what's needed to set and clear single bits in the MMIO registers and the framebuffer. They can't go in free sub-ops with microcode only: `REG_LD` loads the register numbered in `[10:8]`, and A is register 0, so an ALU operation in sub-op 3 would write register 3 instead of A. They need either a whole opcode each (sub-op 0) or a way to load A without the decoder (a control bit and a gate)
 - Shifts don't update the carry, so the bit shifted out of `SHR`/`ROR` is lost (no fast shift-and-add multiplication or multi-byte right shifts without it). It would need hardware: C loading from A's bit 0
 - Store with auto-increment, `ST XY+, REG` (`0x02` sub-op 6 or 7): store at XY and increment XY in the same step (it only changes on the clock edge). Half the instructions to fill or copy memory, like the framebuffer. The load version doesn't fit as well, because the destination comes from `[10:8]`
 - Not worth it for now: relative jumps (faster loops and they don't overwrite the MAR, but they need a 16-bit adder for the PC) and a hardware multiplier (a table of squares gets most of the speed)

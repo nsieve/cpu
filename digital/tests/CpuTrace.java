@@ -30,10 +30,81 @@ import java.util.*;
 // check_cpu.py compiles and runs this, and compares it with the emulator.
 public class CpuTrace {
     static final Map<String, ObservableValue> values = new HashMap<>();
-    // the IR's bits, when IR.dig has no I0-I15 tunnels: the Q of the flip-flop whose D comes from
-    // that bit of the ROM IN splitter, through the gates of the 74377's load enable (found by
-    // following the wires, so it doesn't depend on the layout)
+    // the IR's and A's bits, when IR.dig and ALU.dig have no I0-I15 / AO0-AO7 tunnels: the Q of
+    // the flip-flop whose D comes from that bit of the module's input splitter (ROM IN for the IR,
+    // D_IN for A), found by following the wires back through the chips' gates, multiplexers,
+    // drivers and splitters, so it doesn't depend on the layout
     static final ObservableValue[] irBits = new ObservableValue[16];
+    static final ObservableValue[] aBits = new ObservableValue[8];
+    static final Map<ObservableValue, ModelEntry> producer = new IdentityHashMap<>();
+    static final Map<ObservableValue, String> producerPin = new IdentityHashMap<>();
+
+    static boolean isOutput(Pin p) {
+        return p.getDirection() == de.neemann.digital.core.element.PinDescription.Direction.output;
+    }
+
+    // "3" -> {3, 3}, "0-7" -> {0, 7}
+    static int[] range(String pinName) {
+        String[] parts = pinName.split("-");
+        return new int[]{Integer.parseInt(parts[0]), Integer.parseInt(parts[parts.length - 1])};
+    }
+
+    // which bit of 'bus' the given single-bit value comes from, or -1
+    static int traceBit(ObservableValue start, ObservableValue bus) {
+        Deque<Object[]> todo = new ArrayDeque<>();
+        todo.add(new Object[]{start, 0});
+        Set<String> seen = new HashSet<>();
+        for (int steps = 0; !todo.isEmpty() && steps < 2000; steps++) {
+            Object[] item = todo.poll();
+            ObservableValue v = (ObservableValue) item[0];
+            int bit = (Integer) item[1];
+            if (v == bus) return bit;
+            if (!seen.add(System.identityHashCode(v) + ":" + bit)) continue;
+            ModelEntry e = producer.get(v);
+            if (e == null) continue;
+            String kind = e.getVisualElement().getElementName();
+            if (kind.equals("Splitter")) {
+                int abs = range(producerPin.get(v))[0] + bit;
+                for (Pin p : e.getPins())
+                    if (!isOutput(p)) {
+                        int[] r = range(p.getName());
+                        if (r[0] <= abs && abs <= r[1]) todo.add(new Object[]{p.getValue(), abs - r[0]});
+                    }
+            } else if (kind.equals("Multiplexer") || kind.startsWith("Driver")) {
+                for (Pin p : e.getPins())
+                    if (!isOutput(p) && !p.getName().equals("sel")) todo.add(new Object[]{p.getValue(), bit});
+            } else if (Set.of("And", "Or", "Not", "NAnd", "NOr", "XOr", "XNOr").contains(kind)) {
+                for (Pin p : e.getPins())
+                    if (!isOutput(p)) todo.add(new Object[]{p.getValue(), bit});
+            }
+        }
+        return -1;
+    }
+
+    // maps every flip-flop of a module to the bit of 'bus' its D comes from
+    static void mapFlipFlops(List<ModelEntry> flipFlops, ObservableValue bus, ObservableValue[] bitsOut, String what) {
+        if (bus == null) return;
+        for (ModelEntry e : flipFlops) {
+            ObservableValue d = null, q = null;
+            for (Pin p : e.getPins()) {
+                if (p.getName().equals("D")) d = p.getValue();
+                if (p.getName().equals("Q")) q = p.getValue();
+            }
+            int bit = traceBit(d, bus);
+            if (bit < 0 || bit >= bitsOut.length) continue;
+            if (bitsOut[bit] != null) throw new RuntimeException(what + " bit " + bit + " has two flip-flops");
+            bitsOut[bit] = q;
+        }
+    }
+
+    static long mappedValue(ObservableValue[] bits, String what) {
+        long v = 0;
+        for (int i = 0; i < bits.length; i++) {
+            if (bits[i] == null) throw new RuntimeException(what + " bit " + i + " not found in CPU.dig");
+            v |= (bits[i].getValue() & 1) << i;
+        }
+        return v;
+    }
 
     static void remember(String key, ObservableValue v) {
         if (v != null) values.putIfAbsent(key, v);
@@ -48,12 +119,12 @@ public class CpuTrace {
     // a value made of single-bit tunnels: name0, name1, ...
     static long irValue() {
         if (values.containsKey("IR.dig:I0")) return bits("IR.dig", "I", 16);
-        long v = 0;
-        for (int i = 0; i < 16; i++) {
-            if (irBits[i] == null) throw new RuntimeException("IR bit " + i + " not found in CPU.dig");
-            v |= (irBits[i].getValue() & 1) << i;
-        }
-        return v;
+        return mappedValue(irBits, "IR");
+    }
+
+    static long aValue() {
+        if (values.containsKey("ALU.dig:AO0")) return bits("ALU.dig", "AO", 8);
+        return mappedValue(aBits, "A");
     }
 
     static long bits(String module, String prefix, int count) {
@@ -81,9 +152,8 @@ public class CpuTrace {
         Model m = mc.createModel(false);
 
         // every tunnel, splitter pin and register output, by module: "ALU.dig:AO3"
-        ObservableValue[] romIn = new ObservableValue[16];
-        List<ModelEntry> irFlipFlops = new ArrayList<>();
-        Map<ObservableValue, ModelEntry> irGateOutputs = new IdentityHashMap<>();
+        ObservableValue romInBus = null, dInBus = null;
+        List<ModelEntry> irFlipFlops = new ArrayList<>(), aFlipFlops = new ArrayList<>();
         for (ModelEntry e : mc) {
             VisualElement ve = e.getVisualElement(), cve = e.getContainingVisualElement();
             String module = cve == ve ? "TOP" : cve.getElementName();
@@ -97,39 +167,24 @@ public class CpuTrace {
             if (name.equals("Register"))
                 for (Pin p : e.getPins())
                     if (p.getName().equals("Q")) remember(module + ":register@" + pos, p.getValue());
-            if (module.equals("IR.dig") && name.equals("Splitter")) {
-                Map<String, ObservableValue> pins = new HashMap<>();
-                for (Pin p : e.getPins()) pins.put(p.getName(), p.getValue());
-                if (pins.containsKey("0-15") && pins.containsKey("15"))      // ROM IN, split into 16 bits
-                    for (int i = 0; i < 16; i++) romIn[i] = pins.get(String.valueOf(i));
-            }
-            if (module.equals("IR.dig") && name.equals("D_FF")) irFlipFlops.add(e);
-            if (module.equals("IR.dig") && (name.equals("And") || name.equals("Or") || name.equals("Not")))
+            if (module.equals("IR.dig") || module.equals("ALU.dig"))
                 for (Pin p : e.getPins())
-                    if (p.getDirection() == de.neemann.digital.core.element.PinDescription.Direction.output)
-                        irGateOutputs.put(p.getValue(), e);
-        }
-        for (ModelEntry e : irFlipFlops) {
-            ObservableValue d = null, q = null;
-            for (Pin p : e.getPins()) {
-                if (p.getName().equals("D")) d = p.getValue();
-                if (p.getName().equals("Q")) q = p.getValue();
+                    if (isOutput(p)) { producer.put(p.getValue(), e); producerPin.put(p.getValue(), p.getName()); }
+            if (name.equals("Splitter")) {
+                // the module's input bus, split into single bits: ROM IN (IR) and D_IN (ALU)
+                Map<String, Pin> pins = new HashMap<>();
+                for (Pin p : e.getPins()) pins.put(p.getName(), p);
+                if (module.equals("IR.dig") && pins.containsKey("0-15") && !isOutput(pins.get("0-15")) && pins.containsKey("15"))
+                    romInBus = pins.get("0-15").getValue();
+                if (module.equals("ALU.dig") && pins.containsKey("0-7") && !isOutput(pins.get("0-7")) && pins.containsKey("7"))
+                    dInBus = pins.get("0-7").getValue();
             }
-            // walk back from D through the gates (a few levels) until a ROM IN bit shows up
-            Deque<ObservableValue> todo = new ArrayDeque<>(List.of(d));
-            Set<ObservableValue> seen = Collections.newSetFromMap(new IdentityHashMap<>());
-            for (int steps = 0; !todo.isEmpty() && steps < 50; steps++) {
-                ObservableValue v = todo.poll();
-                if (!seen.add(v)) continue;
-                for (int i = 0; i < 16; i++)
-                    if (romIn[i] == v) { irBits[i] = q; todo.clear(); break; }
-                ModelEntry gate = irGateOutputs.get(v);
-                if (gate != null)
-                    for (Pin p : gate.getPins())
-                        if (p.getDirection() != de.neemann.digital.core.element.PinDescription.Direction.output)
-                            todo.add(p.getValue());
-            }
+            if (module.equals("IR.dig") && name.startsWith("D_FF")) irFlipFlops.add(e);
+            if (module.equals("ALU.dig") && name.startsWith("D_FF")) aFlipFlops.add(e);
         }
+        if (dInBus != null) values.put("ALU:D_IN", dInBus);
+        mapFlipFlops(irFlipFlops, romInBus, irBits, "IR");
+        mapFlipFlops(aFlipFlops, dInBus, aBits, "A");
 
         EEPROM eeprom = m.findNode(EEPROM.class).get(0);
         DataField rom = new DataField(eeprom.getSize());
@@ -148,7 +203,7 @@ public class CpuTrace {
             });
 
         ObservableValue abus = get("TOP:splitter@340,680:0-15");        // in front of the EEPROM
-        ObservableValue dbus = get("ALU.dig:splitter@-500,420:0-7");     // D IN of the ALU
+        ObservableValue dbus = get("ALU:D_IN");                          // D_IN of the ALU (the data bus)
         ObservableValue c0 = get("TOP:splitter@1280,580:0-15");
         ObservableValue c1 = get("TOP:splitter@1440,580:0-15");
         ObservableValue c2 = get("TOP:splitter@1580,580:0-15");
@@ -188,7 +243,7 @@ public class CpuTrace {
             if (interval > 0 && cycle > 0 && cycle % interval == 0 && cycle / interval <= keys.length())
                 type(m, keyboards, typed, keys.substring((int) (cycle / interval) - 1, (int) (cycle / interval)));
             long ir = irValue();
-            long a = bits("ALU.dig", "AO", 8);
+            long a = aValue();
             long x = bits("RFILE.dig", "XO", 8);
             long y = bits("RFILE.dig", "YO", 8);
             long flags = (get("TOP:Z").getValue() & 1) | (get("TOP:C").getValue() & 1) << 1

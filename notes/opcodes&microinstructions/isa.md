@@ -24,21 +24,26 @@ Cycles count every microstep, including the fetch (step 0).
 | ST XY, REG    |  0x09  |   -   |              Mem[XY] <-- Rs              |    -    |   2    |
 | PUSH REG      |  0x0A  |   -   |     Mem[SP] <-- Rs<br>SP <-- SP - 1      |    -    |   2    |
 | POP REG       |  0x0B  |   -   |     SP <-- SP + 1<br>Rd <-- Mem[SP]      |    -    |   3    |
-| ADD A, REG    |  0x0C  |   -   |               A <-- A + Rs               | Z,C,N,V |   2    |
-| ADD A, Imm    |  0x0D  |   -   |              A <-- A + Imm               | Z,C,N,V |   2    |
-| ADC A, REG    |  0x0E  |   -   |             A <-- A + Rs + C             | Z,C,N,V |   2    |
-| SUB A, REG    |  0x0F  |   -   |               A <-- A - Rs               | Z,C,N,V |   2    |
-| SBC A, REG    |  0x10  |   -   |           A <-- A - Rs - 1 + C           | Z,C,N,V |   2    |
-| AND A, REG    |  0x11  |   -   |               A <-- A & Rs               |   Z,N   |   2    |
-| AND A, Imm    |  0x12  |   -   |              A <-- A & Imm               |   Z,N   |   2    |
-| OR A, REG     |  0x13  |   -   |              A <-- A \| Rs               |   Z,N   |   2    |
-| XOR A, REG    |  0x14  |   -   |              A <-- A (+) Rs              |   Z,N   |   2    |
+| ADD A, REG    |  0x0C  |  0x0  |               A <-- A + Rs               | Z,C,N,V |   2    |
+| ADC A, REG    |  0x0C  |  0x1  |             A <-- A + Rs + C             | Z,C,N,V |   2    |
+| SUB A, REG    |  0x0C  |  0x2  |               A <-- A - Rs               | Z,C,N,V |   2    |
+| SBC A, REG    |  0x0C  |  0x3  |           A <-- A - Rs - 1 + C           | Z,C,N,V |   2    |
+| AND A, REG    |  0x0C  |  0x4  |               A <-- A & Rs               |   Z,N   |   2    |
+| OR A, REG     |  0x0C  |  0x5  |              A <-- A \| Rs               |   Z,N   |   2    |
+| XOR A, REG    |  0x0C  |  0x6  |              A <-- A (+) Rs              |   Z,N   |   2    |
+| CP A, REG     |  0x0C  |  0x7  |                  A - Rs                  | Z,C,N,V |   2    |
+| ADD A, Imm    |  0x0D  |  0x0  |              A <-- A + Imm               | Z,C,N,V |   2    |
+| ADC A, Imm    |  0x0D  |  0x1  |            A <-- A + Imm + C             | Z,C,N,V |   2    |
+| SUB A, Imm    |  0x0D  |  0x2  |              A <-- A - Imm               | Z,C,N,V |   2    |
+| SBC A, Imm    |  0x0D  |  0x3  |          A <-- A - Imm - 1 + C           | Z,C,N,V |   2    |
+| AND A, Imm    |  0x0D  |  0x4  |              A <-- A & Imm               |   Z,N   |   2    |
+| OR A, Imm     |  0x0D  |  0x5  |              A <-- A \| Imm              |   Z,N   |   2    |
+| XOR A, Imm    |  0x0D  |  0x6  |             A <-- A (+) Imm              |   Z,N   |   2    |
+| CP A, Imm     |  0x0D  |  0x7  |                 A - Imm                  | Z,C,N,V |   2    |
 | INC A         |  0x15  |   -   |               A <-- A + 1                | Z,C,N,V |   2    |
 | DEC A         |  0x16  |   -   |               A <-- A - 1                | Z,C,N,V |   2    |
 | SHR A         |  0x17  |   -   |            A <-- {0, A[7:1]}             |    -    |   2    |
 | ROR A         |  0x18  |   -   |            A <-- {C, A[7:1]}             |    -    |   2    |
-| CP A, REG     |  0x19  |   -   |                  A - Rs                  | Z,C,N,V |   2    |
-| CP A, Imm     |  0x1A  |   -   |                 A - Imm                  | Z,C,N,V |   2    |
 | JC label      |  0x1B  |  0x0  |       if (C == 1):<br>PC <-- imm16       |    -    | 5 / 3  |
 | JNC label     |  0x1B  |  0x1  |       if (C == 0):<br>PC <-- imm16       |    -    | 5 / 3  |
 | JZ label      |  0x1B  |  0x2  |       if (Z == 1):<br>PC <-- imm16       |    -    | 5 / 3  |
@@ -84,10 +89,11 @@ Cycles count every microstep, including the fetch (step 0).
 - ST Imm and LD Imm keep the register in bits `[10:8]`, because the whole lower byte is the zero-page address. For the store, the control bit `SRC_SEL` makes the source decoder read the register from `[10:8]` instead of `[7:5]`. More about this in `design-decisions/st-zeropage.md`.
 - CP does the same as SUB, but only updates the flags, A is not written.
 - HALT freezes the micro-PC in step 2 with `nHALT`, after the PC already points to the next instruction. The CPU stays there until a reset. More about this in `hardware-design/controlunit.md`.
+- ALU operations: 0x0C is the ALU with a register (Rs in `[7:5]`) and 0x0D with an immediate, and the subOp is the operation: 0 ADD, 1 ADC, 2 SUB, 3 SBC, 4 AND, 5 OR, 6 XOR, 7 CP. The result goes into A with `nA_LD`, which loads A without the register file's decoder, so `[10:8]` can be the subOp (with `REG_LD` it would load the register numbered in `[10:8]`).
 - AND / OR / XOR only load Z and N (`nFLZN_LD`), so C and V keep the value they had.
 - PUSHF / POPF: the flags byte on the stack is `0000VCNZ` (Z in bit 0, N in bit 1, C in bit 2, V in bit 3).
 - INC A / DEC A don't use the carry, they force the carry-in: INC A is A + 0 + 1, and DEC A is A - 0 - 1.
-- Free slots: 0x02 subOp 6-7, 0x03 subOp 2-7, 0x1D subOp 6-7, 0x1E subOp 5 and 0x1F subOp 2, 3, 4 (these were interrupt instructions). If one gets executed, it works as a NOP: 2 cycles, and nothing changes except the PC.
+- Free slots: the whole opcodes 0x0E-0x14, 0x19 and 0x1A (the ALU operations had them before they were grouped in 0x0C and 0x0D), 0x02 subOp 6-7, 0x03 subOp 2-7, 0x1D subOp 6-7, 0x1E subOp 5 and 0x1F subOp 2, 3, 4 (these were interrupt instructions). If one gets executed, it works as a NOP: 2 cycles, and nothing changes except the PC.
 
 - ROR A: the old C goes into bit 7 (the microcode sets `SHR_IN0` only when C = 1). Shifts don't change the flags, so the bit shifted out of bit 0 is lost, it doesn't go into C.
 - LDT A, XY: reads a table from the ROM. In step 1 only the IR's low byte loads from the ROM word at XY, so the opcode the control unit sees stays LDT's, and in step 2 that byte goes to A. XY must point into the ROM (0xC000-0xFFFF). The assembler's `.TABLE` directive writes one byte per word, with LDT's opcode (0xF8) in the high byte.

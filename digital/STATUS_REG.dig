@@ -19,7 +19,7 @@
     </entry>
     <entry>
       <string>Width</string>
-      <int>5</int>
+      <int>6</int>
     </entry>
   </attributes>
   <visualElements>
@@ -52,20 +52,20 @@
       <elementAttributes>
         <entry>
           <string>Label</string>
-          <string>C_FLAG</string>
+          <string>N_FLAG</string>
         </entry>
       </elementAttributes>
-      <pos x="520" y="180"/>
+      <pos x="520" y="140"/>
     </visualElement>
     <visualElement>
       <elementName>In</elementName>
       <elementAttributes>
         <entry>
           <string>Label</string>
-          <string>N_FLAG</string>
+          <string>C_FLAG</string>
         </entry>
       </elementAttributes>
-      <pos x="520" y="140"/>
+      <pos x="520" y="180"/>
     </visualElement>
     <visualElement>
       <elementName>In</elementName>

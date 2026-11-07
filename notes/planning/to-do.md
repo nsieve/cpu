@@ -6,7 +6,7 @@ Everything left before the SFD-8 is done for now, so that the only things left a
 
 These can still change the hardware, so they go first.
 
-- the other ISA ideas in `ideas.md`: ALU operations with an immediate, and `ST XY+, REG`
+- `ST XY+, REG` (`ideas.md`)
 - the real keyboard interface (PS/2?). In Digital it's Digital's own keyboard component
 - SPI: the hardware shifter (74HC165 + 74HC161 + some gates) or keep bit-banging
 - the timer the programs can poll through the MMIO, and what the stop button does (or drop them)

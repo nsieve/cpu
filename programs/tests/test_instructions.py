@@ -183,10 +183,28 @@ class TestAlu(unittest.TestCase):
     def test_add(self): self.check_reg_op("ADD")
     def test_add_imm(self): self.check_imm_op("ADD")
     def test_adc(self): self.check_reg_op("ADC")
+    def test_adc_imm(self): self.check_imm_op("ADC")
     def test_sub(self): self.check_reg_op("SUB")
+    def test_sub_imm(self): self.check_imm_op("SUB")
     def test_sbc(self): self.check_reg_op("SBC")
+    def test_sbc_imm(self): self.check_imm_op("SBC")
     def test_cp(self): self.check_reg_op("CP", writes_a=False)
     def test_cp_imm(self): self.check_imm_op("CP", writes_a=False)
+
+    def test_alu_opcodes(self):
+        # ALU A, REG is 0x0C and ALU A, Imm is 0x0D, and the subop is the operation
+        for subop, op in enumerate(["ADD", "ADC", "SUB", "SBC", "AND", "OR", "XOR", "CP"]):
+            rom, _ = em.assemble_source(f".ORG 0xC000\n{op} A, C\n{op} A, 0x5A")
+            self.assertEqual(rom[0], 0x0C << 11 | subop << 8 | 2 << 5, f"{op} A, C")
+            self.assertEqual(rom[1], 0x0D << 11 | subop << 8 | 0x5A, f"{op} A, 0x5A")
+
+    def test_alu_keeps_the_other_registers(self):
+        # A loads with nA_LD, not through the decoder, so the subop in [10:8] doesn't load B-Y
+        values = {r: 0x21 * (i + 1) & 0xFF for i, r in enumerate(REGS)}
+        for op in ("ADD", "ADC", "SUB", "SBC", "AND", "OR", "XOR", "CP"):
+            for src in ("B", "0x0F"):
+                cpu = run(f"{op} A, {src}", regs=values)
+                self.assertEqual(cpu.r[1:], [values[r] for r in REGS[1:]], f"{op} A, {src}")
 
     def test_alu_with_every_register(self):
         values = {r: 0x10 + i for i, r in enumerate(REGS)}
@@ -218,7 +236,9 @@ class TestAlu(unittest.TestCase):
     def test_and(self): self.check_logic("AND", lambda a, b: a & b)
     def test_and_imm(self): self.check_logic("AND", lambda a, b: a & b, imm=True)
     def test_or(self): self.check_logic("OR", lambda a, b: a | b)
+    def test_or_imm(self): self.check_logic("OR", lambda a, b: a | b, imm=True)
     def test_xor(self): self.check_logic("XOR", lambda a, b: a ^ b)
+    def test_xor_imm(self): self.check_logic("XOR", lambda a, b: a ^ b, imm=True)
 
     def test_logic_ops_keep_c_and_v(self):
         # the logic operations only load Z and N (nFLZN_LD), so C and V keep their value
@@ -227,6 +247,8 @@ class TestAlu(unittest.TestCase):
                 for cv in (0, C | V):
                     cpu = run(f"{op} A, B", regs={"A": a, "B": b}, flags=cv)
                     self.assertEqual(cpu.flags & (C | V), cv, f"{op} with A={a:02X} B={b:02X}")
+                    cpu = run(f"{op} A, {b}", regs={"A": a}, flags=cv)
+                    self.assertEqual(cpu.flags & (C | V), cv, f"{op} with A={a:02X} Imm={b:02X}")
 
     def test_shr(self):
         for a in range(256):
@@ -333,8 +355,10 @@ class TestJumps(unittest.TestCase):
         self.assertEqual((cpu.r[0], cpu.upc, cpu.pc), (1, 2, 0xC002))
 
     def test_free_slots(self):
-        for raw in (0x1600, 0x1700, 0x1A00, 0x1B00, 0x1C00, 0x1D00, 0x1E00, 0x1F00,
-                    0xEE00, 0xEF00, 0xF500, 0xFA00, 0xFB00, 0xFC00):
+        old_alu = [base << 11 | sub << 8 for base in (0x0E, 0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x19, 0x1A)
+                   for sub in (0, 5)]
+        for raw in [0x1600, 0x1700, 0x1A00, 0x1B00, 0x1C00, 0x1D00, 0x1E00, 0x1F00,
+                    0xEE00, 0xEF00, 0xF500, 0xFA00, 0xFB00, 0xFC00] + old_alu:
             values = {r: 0x21 * (i + 1) & 0xFF for i, r in enumerate(REGS)}
             cpu = run(f".RAW 0x{raw:04X}", regs=values, flags=Z | N, mar=0x1234, sp=0x4321)
             self.assertEqual(cpu.r, [values[r] for r in REGS], f".RAW 0x{raw:04X}")

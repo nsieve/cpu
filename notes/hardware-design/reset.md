@@ -69,7 +69,7 @@ The pull resistors are needed because otherwise the control lines would float an
 | EPROM | Inactive word | Pull-down bits          | Pull-up bits             |
 | ----- | ------------- | ----------------------- | ------------------------ |
 | 1     | `0x2FFA`      | 0, 2, 12, 14-15         | 1, 3-11, 13              |
-| 2     | `0xA878`      | 0-2, 7-10, 12, 14       | 3-6, 11, 13, 15          |
+| 2     | `0xA0F8`      | 0-2, 8-12, 14           | 3-7, 13, 15              |
 | 3     | `0x05EB`      | 2, 4, 9, 11-15 (unused) | 0-1, 3, 5-8, 10 (`nHALT`) |
 
 ## Timing
