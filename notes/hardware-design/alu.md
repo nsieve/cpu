@@ -44,6 +44,8 @@ Block diagram of the ALU module:
 | C    | Carry    | Carry-out pin of MSB adder stage  | $C = C_{out7}$                                    |
 | N    | Negative | Most Significant Bit of result    | $N = Y_7$                                         |
 | V    | Overflow | Overflow pin of MSB adder stage   | $V = V_{7}$                                       |
+
+C and V go through a 74157 before the outputs, with `nSHR_OE` as its select. Normally it passes the 74382's carry and overflow, but while the shifter is on it passes A[0] (the bit shifted out) and 0, so `SHR` and `ROR` load C = A[0] and V = 0.
 ## ICs Hardware Logic
 
 <img src="../Attachments/alu_ics.png" alt="ALU ICs" width="600" />

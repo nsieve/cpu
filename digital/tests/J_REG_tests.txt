@@ -1,0 +1,62 @@
+Jump register (J_REG.dig): holds the high byte of a direct jump's target.
+  - A 74574 whose clock is OR(CLK, nJ_LD): it loads D_BUS on the rising edge of CLK, but only
+    when nJ_LD is low in the second half of the step (while CLK is low).
+  - nJ_OE low puts it on AH_BUS (the high byte of the address bus), otherwise AH_BUS floats.
+Like in the CPU, the inputs only change while CLK is high (the EPROMs settle in the first half
+of the step), and only one input changes per row, so the OR never sees two inputs change
+together. If nJ_LD went back up while CLK is low, that would be a rising edge too.
+
+## a step with nJ_LD loads at its end
+D_BUS nJ_LD nJ_OE CLK AH_BUS
+0x12  1     1     1   Z
+0x12  0     1     1   Z
+0x12  0     1     0   Z
+0x12  0     1     1   Z
+0x12  1     1     1   Z
+0x12  1     0     1   0x12
+# a step without nJ_LD doesn't load
+0x34  1     0     1   0x12
+0x34  1     0     0   0x12
+0x34  1     0     1   0x12
+# a load while it's on the address bus
+0x34  0     0     1   0x12
+0x34  0     0     0   0x12
+0x34  0     0     1   0x34
+# nJ_OE only decides if it drives AH_BUS
+0x34  0     1     1   Z
+0x34  1     1     1   Z
+0x34  1     0     1   0x34
+
+## every bit on its own
+D_BUS nJ_LD nJ_OE CLK AH_BUS
+# nJ_LD stays low, so every rising edge of CLK loads
+0x00  0     0     1   X
+0x00  0     0     0   X
+0x00  0     0     1   0x00
+0x01  0     0     1   0x00
+0x01  0     0     0   0x00
+0x01  0     0     1   0x01
+0x02  0     0     1   0x01
+0x02  0     0     0   0x01
+0x02  0     0     1   0x02
+0x04  0     0     1   0x02
+0x04  0     0     0   0x02
+0x04  0     0     1   0x04
+0x08  0     0     1   0x04
+0x08  0     0     0   0x04
+0x08  0     0     1   0x08
+0x10  0     0     1   0x08
+0x10  0     0     0   0x08
+0x10  0     0     1   0x10
+0x20  0     0     1   0x10
+0x20  0     0     0   0x10
+0x20  0     0     1   0x20
+0x40  0     0     1   0x20
+0x40  0     0     0   0x20
+0x40  0     0     1   0x40
+0x80  0     0     1   0x40
+0x80  0     0     0   0x40
+0x80  0     0     1   0x80
+0xFF  0     0     1   0x80
+0xFF  0     0     0   0x80
+0xFF  0     0     1   0xFF

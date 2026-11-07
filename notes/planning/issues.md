@@ -24,7 +24,7 @@ Not bugs, these are on purpose (or the price of something else), but they're eas
 | ---------- | --- |
 | The MAR is lost after `JMP label`, `JCC label`, `CALL label`, `CALLcc label`, `RET` and `RETcc` | They use it to hold the target address. See `design-decisions/jumps.md`. |
 | No `JCC MAR` | Only `JCC XY` and `JCC label`. |
-| Shifts don't update the flags | `SHR`/`ROR` use their own buffer, not the ALU. (`SHL` and `ROL` are really `ADD A, A` and `ADC A, A`, so they do.) |
+| Shifts don't update Z and N | `SHR`/`ROR` use their own buffer, not the ALU, so they only load C (the bit shifted out) and V (cleared). (`SHL` and `ROL` are really `ADD A, A` and `ADC A, A`, so they update all four.) |
 | `INC A` / `DEC A` need the immediate to be `0x00` | They add the IR's low byte. The assembler always leaves it at 0. |
 | `MOV X, SPH` / `MOV Y, SPL` | The subOp (6 and 7) doubles as the destination register, that's why they only work with X and Y. |
 | No `LD X, XY+` / `LD Y, XY+` | X and Y can't load while XY counts. |

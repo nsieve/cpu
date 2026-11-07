@@ -404,14 +404,14 @@ Step 0 is the fetch, and it's the same in every instruction. When a step depends
 | Step | Control bits |
 | ---- | ------------ |
 | 0 | `nIRH_LD`, `nIRL_LD`, `MEM_RD` |
-| 1 | `PC_INC`, `nMPC_RST`, `REG_LD`, `nSHR_OE` |
+| 1 | `PC_INC`, `nMPC_RST`, `REG_LD`, `nSHR_OE`, `nFLCV_LD` |
 
 ### 0x18 --> ROR A
 
 | Step | Control bits |
 | ---- | ------------ |
 | 0 | `nIRH_LD`, `nIRL_LD`, `MEM_RD` |
-| 1 | `PC_INC`, `nMPC_RST`, `REG_LD`, `nSHR_OE`<br>if C: `SHR_IN0` |
+| 1 | `PC_INC`, `nMPC_RST`, `REG_LD`, `nSHR_OE`, `nFLCV_LD`<br>if C: `SHR_IN0` |
 
 ### 0x19 subOp 0x0 --> RETC
 

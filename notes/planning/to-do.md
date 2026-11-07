@@ -19,7 +19,6 @@ These can still change the hardware, so they go first.
 In Digital.
 
 - map the 7 generic gates in `CPU.dig`, `MAR.dig` and `SP.dig` to real chips
-- shift into carry: a 74157 in `ALU.dig` that gives C = A[0] and V = 0 while `nSHR_OE` is active, so `SHR` and `ROR` put the bit they shift out into C
 - the jump latch: holds the high byte of a direct jump's target, so `JMP`, `JCC` and `CALL label` don't go through the MAR anymore (and take 4 cycles instead of 5 when they jump)
 - add whatever the decisions add (keyboard, SPI shifter, timer)
 - draw the clock (the three 555s) as a schematic

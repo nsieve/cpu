@@ -343,21 +343,34 @@ class TestAlu(unittest.TestCase):
                     self.assertEqual(cpu.flags & (C | V), cv, f"{op} with A={a:02X} Imm={b:02X}")
 
     def test_shr(self):
+        # A = {0, A[7:1]}, C = the bit shifted out (A[0]) and V = 0. Z and N don't change
         for a in range(256):
             for flags in (0, Z | C | N | V):
                 cpu = run("SHR A", regs={"A": a}, flags=flags)
                 self.assertEqual(cpu.r[0], a >> 1)
-                self.assertEqual(cpu.flags, flags, "SHR shouldn't change the flags")
+                self.assertEqual(em.flags_str(cpu.flags), em.flags_str(flags & (Z | N) | (a & 1) * C),
+                                 f"SHR A with A={a:02X} and flags {em.flags_str(flags)}")
                 self.assertEqual(cpu.cycles - HALT_CYCLES, 2)
 
     def test_ror(self):
-        # A = {C, A[7:1]}: the microcode sets SHR_IN0 (bit 7) only when C = 1. The flags don't change
+        # A = {C, A[7:1]} and C = A[0], a rotate through the carry (the microcode sets SHR_IN0,
+        # bit 7, only when C = 1). V = 0, Z and N don't change
         for a in range(256):
-            for carry in (0, 1):
-                cpu = run("ROR A", regs={"A": a}, flags=C if carry else 0)
-                self.assertEqual(cpu.r[0], carry << 7 | a >> 1, f"ROR A with A={a:02X} C={carry}")
-                self.assertEqual(cpu.flags, C if carry else 0, "ROR shouldn't change the flags")
+            for flags in (0, C, Z | N | V, Z | C | N | V):
+                carry = flags >> 1 & 1
+                cpu = run("ROR A", regs={"A": a}, flags=flags)
+                what = f"ROR A with A={a:02X} and flags {em.flags_str(flags)}"
+                self.assertEqual(cpu.r[0], carry << 7 | a >> 1, what)
+                self.assertEqual(em.flags_str(cpu.flags), em.flags_str(flags & (Z | N) | (a & 1) * C), what)
                 self.assertEqual(cpu.cycles - HALT_CYCLES, 2)
+
+    def test_16_bit_shift_right(self):
+        # SHR on the high byte, then ROR on the low byte: the bit in between goes through C
+        for value in (0x0001, 0x0100, 0x8001, 0xFFFF, 0x1234, 0xA5A5, 0x0000):
+            cpu = run("MOV A, X\nSHR A\nMOV X, A\nMOV A, Y\nROR A\nMOV Y, A",
+                      regs={"X": value >> 8, "Y": value & 0xFF})
+            self.assertEqual(cpu.r[6] << 8 | cpu.r[7], value >> 1, f"0x{value:04X} >> 1")
+            self.assertEqual(cpu.flags >> 1 & 1, value & 1, f"C after 0x{value:04X} >> 1")
 
     def test_ldt(self):
         # LDT A, XY: A = the low byte of the ROM word at XY, in 3 cycles. Only the IR's low byte

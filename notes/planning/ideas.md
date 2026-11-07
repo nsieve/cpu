@@ -9,7 +9,6 @@
 
 Things that came up while writing the first programs (Fibonacci, primes, the MAX7219 driver):
 
-- Shifts don't update the carry, so the bit shifted out of `SHR`/`ROR` is lost (no fast shift-and-add multiplication or multi-byte right shifts without it). It would need hardware: C loading from A's bit 0
 - Not worth it for now: relative jumps (faster loops and they don't overwrite the MAR, but they need a 16-bit adder for the PC) and a hardware multiplier (a table of squares gets most of the speed)
 
 ## Demo Ideas (For the Final Presentation)

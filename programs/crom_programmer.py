@@ -48,7 +48,9 @@ nSPL_OE  = 39   # output SPL to the data bus
 nSPH_OE  = 40   # output SPH to the data bus
 SRC_SEL  = 41   # source decoder input. 0 = IR[7:5], 1 = IR[10:8] (for ST zp, reg)
 nHALT    = 42   # stops the micro-pc from counting (ENP/ENT of the 74163), so the cpu freezes in the current step
-# 43-47 unused
+nJ_LD    = 43   # load the jump register (J_REG) from the data bus: the high byte of a direct jump's target
+nJ_OE    = 44   # J_REG outputs to the higher byte of the address bus
+# 45-47 unused
 
 
 active_low_mask = (
@@ -60,7 +62,8 @@ active_low_mask = (
     (1 << nA_LD)    | (1 << nSHR_OE)  | (1 << nFL_OE)    |
     (1 << nFLZN_LD) | (1 << nFLCV_LD) | (1 << nSP_INC)   |
     (1 << nSP_LD)   | (1 << nSP_OE)   | (1 << nSPL_OE)   |
-    (1 << nSPH_OE)  | (1 << nHALT)
+    (1 << nSPH_OE)  | (1 << nHALT)    | (1 << nJ_LD)     |
+    (1 << nJ_OE)
 )
 
 
@@ -253,13 +256,13 @@ def gen_microcode():
                 if microstep == 1:
                     control_word |= (1 << ALU_S1) | (1 << nIRD_OE) | (1 << REG_LD) | (1 << A_SEL) | (1 << nFLZN_LD) | (1 << nFLCV_LD) | (1 << nMPC_RST)
 
-            elif base_opcode == 23:  # SHR A
-                if microstep == 1:
-                    control_word |= (1 << nSHR_OE) | (1 << REG_LD) | (1 << nMPC_RST)
+            elif base_opcode == 23:  # SHR A. While nSHR_OE is on, the 74157 in the ALU gives C = A[0]
+                if microstep == 1:   # (the bit shifted out) and V = 0, so they load with nFLCV_LD
+                    control_word |= (1 << nSHR_OE) | (1 << REG_LD) | (1 << nFLCV_LD) | (1 << nMPC_RST)
 
-            elif base_opcode == 24:  # ROR A: A = {C, A[7:1]}. C is part of the microcode address,
+            elif base_opcode == 24:  # ROR A: A = {C, A[7:1]} and C = A[0]. C is part of the microcode address,
                 if microstep == 1:   # so bit 7 (SHR_IN0) is set only when C = 1
-                    control_word |= (1 << nSHR_OE) | (1 << REG_LD) | (1 << nMPC_RST)
+                    control_word |= (1 << nSHR_OE) | (1 << REG_LD) | (1 << nFLCV_LD) | (1 << nMPC_RST)
                     if c_flag:
                         control_word |= (1 << SHR_IN0)
 

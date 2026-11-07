@@ -323,6 +323,8 @@ def gen_step(cw):
         cin = int(on(cp.ALU_CIN))
         code.append(f"res, alufl = alu8({s}, c.r[0], dbus, {cin})")
         desc.append(f"ALU = {alu_text(s, cin)}")
+        if on(cp.nSHR_OE):  # the 74157 in front of C and V: the bit shifted out (A[0]) and 0
+            code.append("alufl = alufl & 5 | (c.r[0] & 1) << 1")
 
     # ---- clock edge: everything below loads at the same time ----
     if on(cp.MEM_RD) and on(cp.MEM_WR):
@@ -409,7 +411,10 @@ def gen_step(cw):
             code.append(f"c.flags = {src} & 15")
         else:
             code.append(f"c.flags = c.flags & {15 ^ fl_mask} | {src} & {fl_mask}")
-        desc.append(f"flags ({loaded}) <- " + ("data" if on(cp.FL_SEL) else "ALU"))
+        if on(cp.nSHR_OE) and not on(cp.FL_SEL):
+            desc.append(f"flags ({loaded}) <- C = A[0], V = 0")
+        else:
+            desc.append(f"flags ({loaded}) <- " + ("data" if on(cp.FL_SEL) else "ALU"))
 
     if on(cp.MEM_RD):
         code.append("if c.kb_read: c.kb_consume()")

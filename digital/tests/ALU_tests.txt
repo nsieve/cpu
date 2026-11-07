@@ -9,6 +9,7 @@ and the shifter.
   - The ALU works on A and D_IN with ALU_S0-S2 and ALU_CIN. Z, C, N and V are always out:
       S = 0 clear, 1 D_IN - A, 2 A - D_IN, 3 A + D_IN, 4 XOR, 5 OR, 6 AND, 7 0xFF
     The subtractions are A + NOT(B) + carry in, so C = 1 means no borrow.
+    C and V go through a 74157: while nSHR_OE = 0 they're A[0] (the bit shifted out) and 0.
     The ALU result only goes into A (through the 74257), so every case checks the flags first,
     then loads the result into A and reads A on D_OUT.
 A_LD and A_OE are active low but their names don't start with n, so they get a default here:
@@ -110,12 +111,12 @@ D_IN A_LD A_OE A_SEL ALU_S0 ALU_S1 ALU_S2 ALU_CIN nSHR_OE SHR_IN0 CLK RST D_OUT 
 # A_SEL only matters when A loads
 0xEE 1    0    1     1      1      0      0       1       0       C   0   0x00  X      X      X      X
 
-## shift right
+## shift right (while nSHR_OE = 0, the 74157 gives C = A[0], the bit shifted out, and V = 0)
 D_IN A_LD A_OE A_SEL ALU_S0 ALU_S1 ALU_S2 ALU_CIN nSHR_OE SHR_IN0 CLK RST D_OUT Z_FLAG C_FLAG N_FLAG V_FLAG
 loop(i, 256)
-(i)  0    1    0     0      0      0      0       1       0       C   0   X            X X X X
-0x00 1    1    0     0      0      0      0       0       0       0   0   (i>>1)       X X X X
-0x00 1    1    0     0      0      0      0       0       1       0   0   ((i>>1)|128) X X X X
+(i)  0    1    0     0      0      0      0       1       0       C   0   X            X X     X X
+0x00 1    1    0     0      0      0      0       0       0       0   0   (i>>1)       X (i&1) X 0
+0x00 1    1    0     0      0      0      0       0       1       0   0   ((i>>1)|128) X (i&1) X 0
 # A is still i
-0x00 1    0    0     0      0      0      0       1       0       0   0   (i)          X X X X
+0x00 1    0    0     0      0      0      0       1       0       0   0   (i)          X X     X X
 end loop

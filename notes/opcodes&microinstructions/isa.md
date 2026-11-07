@@ -62,8 +62,8 @@ Cycles count every microstep, including the fetch (step 0).
 | LD REG, MAR+  |  0x11  |   -   |    Rd <-- Mem[MAR]<br>MAR <-- MAR + 1    |    -    |   2    |
 | INC A         |  0x15  |   -   |               A <-- A + 1                | Z,C,N,V |   2    |
 | DEC A         |  0x16  |   -   |               A <-- A - 1                | Z,C,N,V |   2    |
-| SHR A         |  0x17  |   -   |            A <-- {0, A[7:1]}             |    -    |   2    |
-| ROR A         |  0x18  |   -   |            A <-- {C, A[7:1]}             |    -    |   2    |
+| SHR A         |  0x17  |   -   |      A <-- {0, A[7:1]}<br>C <-- A[0]     |   C,V   |   2    |
+| ROR A         |  0x18  |   -   |      A <-- {C, A[7:1]}<br>C <-- A[0]     |   C,V   |   2    |
 | RETC          |  0x19  |  0x0  | if (C == 1):<br>SP + 2<br>PC <-- Mem[SP] |    -    | 5 / 2  |
 | RETNC         |  0x19  |  0x1  | if (C == 0):<br>SP + 2<br>PC <-- Mem[SP] |    -    | 5 / 2  |
 | RETZ          |  0x19  |  0x2  | if (Z == 1):<br>SP + 2<br>PC <-- Mem[SP] |    -    | 5 / 2  |
@@ -133,7 +133,8 @@ Cycles count every microstep, including the fetch (step 0).
 - INC A / DEC A don't use the carry, they force the carry-in: INC A is A + 0 + 1, and DEC A is A - 0 - 1.
 - Free slots: the whole opcodes 0x12-0x14 (old ALU opcodes, from before the ALU was grouped in 0x0C and 0x0D), 0x03 subOp 2-7, 0x1D subOp 6-7, 0x1E subOp 5 and 0x1F subOp 3, 4 (these were interrupt instructions). If one gets executed, it works as a NOP: 2 cycles, and nothing changes except the PC.
 
-- ROR A: the old C goes into bit 7 (the microcode sets `SHR_IN0` only when C = 1). Shifts don't change the flags, so the bit shifted out of bit 0 is lost, it doesn't go into C.
+- SHR A / ROR A: the bit shifted out (A[0]) goes into C, and V is cleared. While `nSHR_OE` is on, a 74157 in the ALU puts A[0] and 0 on the ALU's C and V outputs, and the shifts load them with `nFLCV_LD`. Z and N don't change.
+- ROR A: the old C goes into bit 7 (the microcode sets `SHR_IN0` only when C = 1), so it's a rotate through the carry. `SHR` on the high byte and then `ROR` on the low byte shift 16 bits right.
 - LDT A, XY: reads a table from the ROM. In step 1 only the IR's low byte loads from the ROM word at XY, so the opcode the control unit sees stays LDT's, and in step 2 that byte goes to A. XY must point into the ROM (0xC000-0xFFFF). The assembler's `.TABLE` directive writes one byte per word, with LDT's opcode (0xF8) in the high byte.
 - LDT A, XY+ does the same and then XY + 1, to read a table byte after byte. Its subOp is 2, so in step 2 A loads with `nA_LD` (`REG_LD` would load C, register 2).
 - Auto-increment (`ST XY+`, `ST MAR+`, `LD REG, XY+`, `LD REG, MAR+`, `LDT A, XY+`): the access uses the address from before, and the register counts on the clock edge at the end of the step, so the increment doesn't cost a cycle. `LD REG, XY+` only works with A-F, because X and Y can't load while XY counts (the assembler rejects `LD X, XY+` and `LD Y, XY+`). `ST XY+, X` and `ST XY+, Y` store the value from before the increment.

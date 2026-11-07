@@ -29,7 +29,7 @@ The 3 EPROMs share the same 16-bit address, and each one outputs 16 control bits
 | -------- | ----- | --------------------------------------- |
 | `C0-15`  | 1ROM  | control bits 0-15                       |
 | `C16-31` | 2ROM  | control bits 16-31                      |
-| `C32-47` | 3ROM  | control bits 32-42 (43-47 are unused)   |
+| `C32-47` | 3ROM  | control bits 32-44 (45-47 are unused)   |
 
 16 address bits means 64K words per EPROM. Most of them are never used, but the programmer writes every address anyway, so there's nothing undefined in them.
 
@@ -93,7 +93,7 @@ It also fits how the instruction set was designed. The instruction set changed a
 
 ### Why 3 EPROMs
 
-The CPU needs 43 control bits. Each EPROM outputs 16, so 2 would only give 32, and 3 give 48, leaving 5 free bits for the future.
+The CPU needs 45 control bits. Each EPROM outputs 16, so 2 would only give 32, and 3 give 48, leaving 3 free bits for the future.
 
 ## Physical TTL Mapping
 
