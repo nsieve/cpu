@@ -427,7 +427,7 @@ class TestJumps(unittest.TestCase):
                 taken = bool(flags) != (i % 2 == 1)
                 cpu = run_source_with_target(f"J{cond} TARGET", flags=flags)
                 self.assertEqual(cpu.r[0], 2 if taken else 1, f"J{cond} with flags {em.flags_str(flags)}")
-                self.assertEqual(cpu.jump_cycles, 5 if taken else 3, f"J{cond} cycles")
+                self.assertEqual(cpu.jump_cycles, 4 if taken else 3, f"J{cond} cycles")
 
     def test_conditional_jumps_xy(self):
         for i, cond in enumerate(em.CONDITIONS):
@@ -439,19 +439,45 @@ class TestJumps(unittest.TestCase):
                 self.assertEqual(cpu.jump_cycles, 2)
 
     def test_jmp(self):
-        for jump, setup, cycles in (("JMP TARGET", "", 5),
+        for jump, setup, cycles in (("JMP TARGET", "", 4),
                                     ("JMP MAR", "MOV MARH, HIGH:TARGET\nMOV MARL, LOW:TARGET", 2),
                                     ("JMP XY", "MOV X, HIGH:TARGET\nMOV Y, LOW:TARGET", 2)):
             cpu = run_source_with_target(jump, setup=setup)
             self.assertEqual(cpu.r[0], 2, jump)
             self.assertEqual(cpu.jump_cycles, cycles, jump)
 
-    def test_direct_jump_overwrites_mar(self):
-        cpu = run_source_with_target("JMP TARGET", mar=0x1234)
-        self.assertEqual(cpu.mar, cpu.symbols["TARGET"])
+    def test_direct_jump_targets(self):
+        # the target's high byte goes through J_REG and the low byte through the IR. The jumps start at
+        # the end of a page, so word 2 is on the next one, and the target is on another page
+        source = """
+            .ORG 0xC0FF
+                {jump}
+                MOV A, 1
+                HALT
+            .ORG 0xD2AB
+            TARGET:
+                MOV A, 2
+                HALT
+        """
+        for jump in ("JMP TARGET", "JZ TARGET", "CALL TARGET", "CALLZ TARGET"):
+            rom, symbols = em.assemble_source(source.format(jump=jump))
+            cpu = run_rom(rom, flags=Z, sp=0xBAFF, symbols=symbols)
+            self.assertEqual((cpu.r[0], cpu.inst_pc), (2, 0xD2AC), jump)
+            if jump.startswith("CALL"):           # the return address is right after word 2, on the next page
+                self.assertEqual((cpu.ram[0xBAFF], cpu.ram[0xBAFE]), (0xC1, 0x01), jump)
+
+    def test_direct_jumps_keep_the_mar(self):
+        # JMP, JCC, CALL and CALLcc label keep the target's high byte in J_REG, so the MAR isn't touched
+        for jump in ("JMP TARGET", "JZ TARGET", "JNZ TARGET", "CALL TARGET", "CALLZ TARGET", "CALLNZ TARGET"):
+            cpu = run_source_with_target(jump, flags=Z, mar=0x1234)
+            self.assertEqual(cpu.mar, 0x1234, jump)
+        # RET and RETcc still pop the return address through the MAR
+        rom, symbols = em.assemble_source(".ORG 0xC000\nCALL SUB\nBACK:\nHALT\nSUB:\nRETZ")
+        cpu = run_rom(rom, flags=Z, mar=0x1234, sp=0xBAFF, symbols=symbols)
+        self.assertEqual(cpu.mar, symbols["BACK"])
 
     def test_call_ret(self):
-        for call, setup, cycles in (("CALL SUB", "", 7),
+        for call, setup, cycles in (("CALL SUB", "", 6),
                                     ("CALL MAR", "MOV MARH, HIGH:SUB\nMOV MARL, LOW:SUB", 5),
                                     ("CALL XY", "MOV X, HIGH:SUB\nMOV Y, LOW:SUB", 5)):
             source = f"""
@@ -497,7 +523,7 @@ class TestJumps(unittest.TestCase):
                     back = symbols["BACK"]
                     self.assertEqual((cpu.ram[0xBAFF], cpu.ram[0xBAFE]), (back >> 8, back & 0xFF), what)
                 # CALLcc (+ MOV A + RET) + MOV B + HALT
-                self.assertEqual(cpu.cycles, (7 + 2 + 5 if taken else 3) + 2 + HALT_CYCLES, what)
+                self.assertEqual(cpu.cycles, (6 + 2 + 5 if taken else 3) + 2 + HALT_CYCLES, what)
 
     def test_conditional_returns(self):
         source = """
@@ -519,7 +545,7 @@ class TestJumps(unittest.TestCase):
                 self.assertEqual((cpu.r[0], cpu.r[1], cpu.sp), (0 if taken else 0x55, 0x77, 0xBAFF), what)
                 self.assertEqual(cpu.flags, flags, what)
                 # CALL + RETcc (+ MOV A + RET) + MOV B + HALT
-                self.assertEqual(cpu.cycles, 7 + (5 if taken else 2 + 2 + 5) + 2 + HALT_CYCLES, what)
+                self.assertEqual(cpu.cycles, 6 + (5 if taken else 2 + 2 + 5) + 2 + HALT_CYCLES, what)
 
     def test_conditional_call_syntax(self):
         for source in ("CALLZ MAR", "CALLNC XY", "RETZ A"):
@@ -545,7 +571,7 @@ class TestJumps(unittest.TestCase):
             self.assertEqual(cpu.cycles - HALT_CYCLES, 2, f".RAW 0x{raw:04X}")
 
 
-def run_source_with_target(jump, flags=0, setup="", mar=0):
+def run_source_with_target(jump, flags=0, setup="", mar=0, sp=0xBAFF):
     """Runs: setup, the jump, MOV A, 1 / HALT, TARGET: MOV A, 2 / HALT.
     Leaves the cycles the jump took in cpu.jump_cycles."""
     source = f"""
@@ -558,7 +584,7 @@ def run_source_with_target(jump, flags=0, setup="", mar=0):
         HALT
     """
     rom, symbols = em.assemble_source(".ORG 0xC000\n" + source)
-    cpu = run_rom(rom, flags=flags, mar=mar, symbols=symbols)
+    cpu = run_rom(rom, flags=flags, mar=mar, sp=sp, symbols=symbols)
     setup_cycles = 2 * len([l for l in setup.splitlines() if l.strip()])
     cpu.jump_cycles = cpu.cycles - setup_cycles - 2 - HALT_CYCLES
     return cpu

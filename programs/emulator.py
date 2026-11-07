@@ -7,7 +7,7 @@
 # The control signals come straight from the microcode in crom_programmer.py (or from
 # the eprom*.hex files), so this runs exactly what the EPROMs hold, and the cycle
 # counts are exact. The rest of the CPU is a model of the Digital circuits: the buses,
-# the registers (all of them load on the rising clock edge), the ALU (two 74382, carry
+# the registers (all of them load on the rising clock edge, J_REG included), the ALU (two 74382, carry
 # and overflow included), the RAM, the ROM (it only goes to the IR) and the MMIO
 # (keyboard, SPI_OUT with the MAX7219 on it, and the LEDs).
 #
@@ -228,7 +228,7 @@ def is_two_words(word):
 # description of the step, used by --microcode.
 
 ADDR_LOW = {"PC": "c.pc & 0xFF", "MAR": "c.mar & 0xFF", "XY": "c.r[7]", "SP": "c.sp & 0xFF", "IR": "ir & 0xFF"}
-ADDR_HIGH = {"PC": "c.pc >> 8", "MAR": "c.mar >> 8", "XY": "c.r[6]", "SP": "c.sp >> 8", "0x00": "0"}
+ADDR_HIGH = {"PC": "c.pc >> 8", "MAR": "c.mar >> 8", "XY": "c.r[6]", "SP": "c.sp >> 8", "0x00": "0", "J": "c.j"}
 ADDR_FULL = {"PC": "c.pc", "MAR": "c.mar", "SP": "c.sp", "XY": "c.r[6] << 8 | c.r[7]"}
 
 def gen_step(cw):
@@ -251,6 +251,8 @@ def gen_step(cw):
         low.append("IR")
     if on(cp.nHBA_OE):
         high.append("0x00")
+    if on(cp.nJ_OE):                                    # J_REG, the high byte of a direct jump's target
+        high.append("J")
     if len(low) > 1 or len(high) > 1:
         problems.append(f"the address bus is driven by {' and '.join(dict.fromkeys(low + high))} at once")
     addr_used = on(cp.MEM_RD) or on(cp.MEM_WR) or on(cp.nPC_LD) or on(cp.nSP_LD) or ir_ld
@@ -260,7 +262,7 @@ def gen_step(cw):
             addr_desc = low[0]
         else:
             code.append(f"abus = ({ADDR_HIGH[high[0]]}) << 8 | {ADDR_LOW[low[0]]}")
-            addr_desc = "0x00:IR[7:0]" if (high[0], low[0]) == ("0x00", "IR") else f"{high[0]}:{low[0]}"
+            addr_desc = f"{high[0]}:" + ("IR[7:0]" if low[0] == "IR" else low[0])
         if addr_used:
             desc.append(f"address bus = {addr_desc}")
     else:
@@ -292,7 +294,7 @@ def gen_step(cw):
 
     alu_used = ((on(cp.REG_LD) or on(cp.nA_LD)) and on(cp.A_SEL)) or (fl_mask and not on(cp.FL_SEL))
     data_used = (on(cp.REG_LD) or on(cp.nA_LD) or on(cp.nMARL_LD) or on(cp.nMARH_LD) or on(cp.MEM_WR)
-                 or (fl_mask and on(cp.FL_SEL)) or alu_used)
+                 or on(cp.nJ_LD) or (fl_mask and on(cp.FL_SEL)) or alu_used)
     if on(cp.MEM_RD):
         if drivers:
             code.append("m = c.mem_read(abus)")
@@ -367,6 +369,10 @@ def gen_step(cw):
         sign = "-" if on(cp.MAR_DIR) else "+"
         code.append(f"c.mar = (c.mar {sign} 1) & 0xFFFF")
         desc.append(f"MAR <- MAR {sign} 1")
+
+    if on(cp.nJ_LD):
+        code.append("c.j = dbus")
+        desc.append("J <- data")
 
     if on(cp.REG_LD):
         code.append("d = ir >> 8 & 7")
@@ -485,6 +491,7 @@ class CPU:
         self.r = [0] * 8                # A B C D E F X Y
         self.mar = 0
         self.sp = 0
+        self.j = 0                      # J_REG
         self.flags = 0                  # bit 0 Z, 1 C, 2 N, 3 V
         self.ram = bytearray(0x10000)
         if random_state:                # real hardware: everything without a reset powers up random
@@ -492,6 +499,7 @@ class CPU:
             self.ram = bytearray(rnd.getrandbits(8) for _ in range(0x10000))
             self.r[6], self.r[7] = rnd.getrandbits(8), rnd.getrandbits(8)
             self.mar, self.sp, self.flags = rnd.getrandbits(16), rnd.getrandbits(16), rnd.getrandbits(4)
+            self.j = rnd.getrandbits(8)
         self.written = bytearray(0x10000)
 
         # MMIO

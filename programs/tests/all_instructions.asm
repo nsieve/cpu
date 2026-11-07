@@ -374,6 +374,25 @@ K2:
     CALLN RT_N
     CALLV RT_V
 
+    ; ---- the direct jumps and calls don't touch the MAR (J_REG holds the target), RET does ----
+    MOV MARH, 0x24
+    MOV MARL, 0x68
+    MOV A, 0x11
+    CP A, 0x11              ; Z
+    JMP M1
+    JMP BAD
+M1:
+    JZ M2
+    JMP BAD
+M2:
+    JNZ BAD                 ; not taken
+    CALLNZ BAD              ; not taken
+    ST MAR+, A              ; 0x2468 = 0x11 if the MAR is still there
+    CALL ST_MAR             ; 0x2469
+    MOV MARH, 0x24
+    MOV MARL, 0x6A
+    CALLZ ST_MAR            ; 0x246A
+
     ; ---- free slots, they work as NOPs ----
     .RAW 0x1B00
     .RAW 0x1A00
@@ -419,6 +438,10 @@ DONE:
 
 SUB1:
     INC A
+    RET
+
+ST_MAR:                     ; stores A at the MAR, before RET overwrites it
+    ST MAR, A
     RET
 
 RT_ZC:                      ; with Z C: the 4 false conditions first

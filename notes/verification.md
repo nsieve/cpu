@@ -16,7 +16,7 @@ If the emulator does what `isa.md` says (layer 2), and `CPU.dig` does exactly wh
 - the ROM only goes to the IR, so reading the ROM area through the data bus gives nothing
 - the MMIO has the keyboard (data and status), `SPI_OUT` with the MAX7219 model on it, and the LEDs
 
-Since it follows the microcode, the cycle counts are exact, and it's fast: `primes.asm` (1.7 million cycles) takes under a second, while Digital needs about a minute and a half for it without the GUI.
+Since it follows the microcode, the cycle counts are exact, and it's fast: `primes.asm` (1.6 million cycles) takes under a second, while Digital needs about a minute and a half for it without the GUI.
 
 ```
 python3 programs/emulator.py programs/primes.asm                 run until HALT, show the display and LED changes
@@ -37,12 +37,11 @@ when Z = 0 (3 cycles):
   step 1  PC <- PC + 1
   step 2  PC <- PC + 1, next instruction
 
-when Z = 1 (5 cycles):
+when Z = 1 (4 cycles):
   step 0  address bus = PC, IR <- ROM[address]
-  step 1  data bus = IR[7:0], PC <- PC + 1, MARH <- data
+  step 1  data bus = IR[7:0], PC <- PC + 1, J <- data
   step 2  address bus = PC, IR <- ROM[address]
-  step 3  data bus = IR[7:0], PC <- PC + 1, MARL <- data
-  step 4  address bus = MAR, PC <- address bus, next instruction
+  step 3  address bus = J:IR[7:0], PC <- address bus, next instruction
 ```
 
 It stops with an error on anything that would go wrong on real hardware: two drivers on a bus at the same time, loading from a bus nobody drives, or fetching an instruction from outside the ROM. It warns about reading RAM that was never written (it powers up random) and writing to the ROM area.
@@ -98,7 +97,7 @@ The quick set is `main.asm`, `programs/tests/all_instructions.asm` (every instru
 
 ## What They Found
 
-Everything matches cycle by cycle, including all 1,697,481 cycles of `primes.asm`. At first there were two differences in `CPU.dig`, both fixed now:
+Everything matches cycle by cycle, including all 1,640,550 cycles of `primes.asm`. At first there were two differences in `CPU.dig`, both fixed now:
 
 - The result of `SHR` and `ROR` never reached the data bus. The wire from the ALU's `ALU` output to `STATUS_REG`'s `D IN` (from (940,300) to (1040,300)) crossed the data bus wire coming up from `A_R OUT` at (960,300) without a junction, so A loaded a floating bus. The `ALU` module itself was fine (its module test passed).
 - The keyboard lost keys. When a fetch came right after a write to the MMIO (like every `ST XY` to `SPI_OUT`), `MEM_RD` turned on while the address bus still pointed to the MMIO, so the MMIO decoder could select the keyboard with a read going on, and every glitch on `KB_EN` took a key out of the buffer. The fix was gating `MEM_RD` and `MEM_WR` with the clock (`nMEM.dig`, see `design-decisions/memory-strobes.md`).

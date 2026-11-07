@@ -37,7 +37,7 @@ Since the opcode input is the whole upper byte of the IR, the EPROMs also see bi
 
 ### Micro-Program Counter
 
-The micro-PC is a single 74163, a 4-bit synchronous counter. It counts up on every clock, and its output is the `microstep` input of the EPROMs. 4 bits means up to 16 steps per instruction, but the longest one (`CALL label`) only takes 7.
+The micro-PC is a single 74163, a 4-bit synchronous counter. It counts up on every clock, and its output is the `microstep` input of the EPROMs. 4 bits means up to 16 steps per instruction, but the longest ones (`CALL label` and a taken `CALLcc label`) only take 6.
 
 At the end of every instruction, the microcode activates `nMPC_RST` in the last step. The 74163 has a synchronous clear, so the counter doesn't reset right away, it goes back to 0 on the next clock edge. This way the last step still runs for a full cycle, and the next cycle is step 0 of the next instruction.
 

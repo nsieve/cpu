@@ -31,22 +31,27 @@ This way, all three problems from before are fixed, because, since it's treated 
 
 So now there are two kinds of jumps (and calls):
 
-- Direct (`JMP label`, `JCC label`, `CALL label`): the target address is written inside the two words of the instruction itself. The CPU still needs a 16-bit register to hold the address before loading it into the PC (the PC loads from the address bus, and only MAR, XY and SP can drive a full 16-bit address there), so it uses the MAR as a scratch register. This means after a direct jump or call, whatever was in the MAR is lost, so the MAR should never be trusted to keep a value across one.
+- Direct (`JMP label`, `JCC label`, `CALL label`, `CALLcc label`): the target address is written inside the two words of the instruction itself. The PC loads from the address bus, so the whole target has to be on the bus at once, but the IR only holds one word. So in step 1 the high byte (from word 1) goes into the jump register (`J_REG`, see `hardware-design/jump_register.md`), word 2 is fetched into the IR, and in the last step `J_REG` drives the high byte of the address bus and the IR the low byte (like in the zero-page instructions), and the PC loads it. The MAR isn't touched. Before `J_REG`, the MAR held the target, so whatever was in the MAR was lost after every direct jump or call, and they took one more cycle (the low byte had to be copied into MARL).
 - Indirect (`JMP MAR`, `JMP XY`, `JCC XY`, `CALL MAR`, `CALL XY`): the CPU jumps to whatever address is already in that register. These are 1-word instructions.
 
-To keep them organized, all jumps and calls live in opcodes 27 to 29:
+To keep them organized, all jumps, calls and conditional returns live in opcodes 25 to 29 (`RET` is in 31, with `LDT`, the flags and `HALT`):
 
 | Opcode | Subop | Instruction | Cycles |
 | ------ | ----- | ----------- | ------ |
-| 27 | 0-7 (condition) | JCC label | 5 taken, 3 not taken |
+| 25 | 0-7 (condition) | RETcc | 5 taken, 2 not taken |
+| 26 | 0-7 (condition) | CALLcc label | 6 taken, 3 not taken |
+| 27 | 0-7 (condition) | JCC label | 4 taken, 3 not taken |
 | 28 | 0-7 (condition) | JCC XY | 2 |
-| 29 | 0 | JMP label | 5 |
-| 29 | 1 | CALL label | 7 |
+| 29 | 0 | JMP label | 4 |
+| 29 | 1 | CALL label | 6 |
 | 29 | 2 | JMP MAR | 2 |
 | 29 | 3 | JMP XY | 2 |
 | 29 | 4 | CALL MAR | 5 |
 | 29 | 5 | CALL XY | 5 |
+| 31 | 1 | RET | 5 |
 
 The conditions are: 0 = C, 1 = NC, 2 = Z, 3 = NZ, 4 = N, 5 = NN, 6 = V, 7 = NV. There is no `JCC MAR`, only `JCC XY`.
 
-For the calls, the PC is pushed only AFTER it has been incremented past the whole instruction, so the address saved on the stack is always the one of the next instruction (before, the high byte was pushed before the increment, which broke when the CALL was at the end of a page like `0xC0FF`).
+For the calls, the PC is pushed only AFTER it has been incremented past the whole instruction, so the address saved on the stack is always the one of the next instruction (before, the high byte was pushed before the increment, which broke when the CALL was at the end of a page like `0xC0FF`). `CALL label` does that second increment in the same step as the fetch of word 2 (the IR loads and the PC counts on the same clock edge, so the fetch still uses the old address), so the pushes start in step 3.
+
+`RET` and `RETcc` still go through the MAR: they pop the return address into MARL and MARH, and the PC loads it from there. So the MAR is lost after them.

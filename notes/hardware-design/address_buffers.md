@@ -30,6 +30,8 @@ The zero-page instructions (`LD REG, Imm` and `ST Imm, REG`) use the lower byte 
 
 Since the PC drives the address bus by default, the zero-page instructions also activate `PC_OE` to disconnect it. So a zero-page access is `PC_OE` + `nIRA_OE` + `nHBA_OE` together (more about the IR side in `instregister.md`).
 
+The direct jumps put an address together the same way, but with the jump register on the upper byte instead of this buffer: `PC_OE` + `nIRA_OE` + `nJ_OE` puts `J_REG:IR[7:0]` on the address bus, and the PC loads it (see `jump_register.md`).
+
 ### Reset Buffer
 
 When the CPU starts, the PC has to begin at `0xC000`, the start of the ROM (see `memory_map.md`). The Reset Buffer is 2 74245 with that address hardwired:

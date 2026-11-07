@@ -279,43 +279,34 @@ def gen_microcode():
                 elif microstep == 1:
                     control_word |= (1 << nMPC_RST)
 
+            # The direct jumps and calls (JCC, CALLcc, JMP and CALL label) keep the high byte of the target
+            # in J_REG, so the MAR isn't touched. In the last step J_REG drives the high byte of the address
+            # bus and the IR (with word 2's low byte, the target's low byte) the low byte, and the PC loads that.
             elif base_opcode == 26:  # CALL cc imm16: a CALL if the condition is true, otherwise it skips the second word like JCC
                 if take_jump:
-                    if microstep == 1: # load high byte into marh (and pc++ automatically)
-                        control_word |= (1 << nIRD_OE) | (1 << nMARH_LD)
-                    elif microstep == 2: # read second word and store in instruction register
-                        control_word |= (1 << MEM_RD) | (1 << nIRH_LD) | (1 << nIRL_LD)
-                    elif microstep == 3: # load low byte into marl and pc++ (pc is now the return address)
-                        control_word |= (1 << nIRD_OE) | (1 << nMARL_LD) | (1 << PC_INC)
-                    elif microstep == 4: # push PCH
+                    if microstep == 1: # the high byte of the target into J_REG (and pc++ automatically)
+                        control_word |= (1 << nIRD_OE) | (1 << nJ_LD)
+                    elif microstep == 2: # read the second word into the IR, and pc++ (pc is now the return address)
+                        control_word |= (1 << MEM_RD) | (1 << nIRH_LD) | (1 << nIRL_LD) | (1 << PC_INC)
+                    elif microstep == 3: # push PCH
                         control_word |= (1 << PC_OE) | (1 << nPCH_OE) | (1 << nSP_OE) | (1 << nSP_INC) | (1 << SP_DIR) | (1 << MEM_WR)
-                    elif microstep == 5: # push PCL
+                    elif microstep == 4: # push PCL
                         control_word |= (1 << PC_OE) | (1 << nPCL_OE) | (1 << nSP_OE) | (1 << nSP_INC) | (1 << SP_DIR) | (1 << MEM_WR)
-                    elif microstep == 6: # load destination from MAR into PC
-                        control_word |= (1 << PC_OE) | (1 << nPC_LD) | (1 << nMAR_OE) | (1 << nMPC_RST)
+                    elif microstep == 5: # PC <- J_REG:IR[7:0]
+                        control_word |= (1 << PC_OE) | (1 << nIRA_OE) | (1 << nJ_OE) | (1 << nPC_LD) | (1 << nMPC_RST)
                 elif microstep == 2: # not taken: skip the second word and finish (3 cycles total)
                     control_word |= (1 << PC_INC) | (1 << nMPC_RST)
 
             elif base_opcode == 27:  # JCC imm16
-                take_jump = check_condition(sub_opcode, z_flag, c_flag, n_flag, v_flag)
-
-                if microstep == 1:
-                    if take_jump: # load high byte into marh (and pc++ automatically)
-                        control_word |= (1 << nIRD_OE) | (1 << nMARH_LD)
-                    else: # Branch not taken: Skip Low Byte
-                        pass
-
-                elif microstep == 2:
-                    if take_jump: # Read second word and store in Instruction Register
+                if take_jump:
+                    if microstep == 1: # the high byte of the target into J_REG (and pc++ automatically)
+                        control_word |= (1 << nIRD_OE) | (1 << nJ_LD)
+                    elif microstep == 2: # read the second word into the IR
                         control_word |= (1 << MEM_RD) | (1 << nIRH_LD) | (1 << nIRL_LD)
-                    else: # Branch not taken: Skip High Byte and finish instruction (3 cycles total)
-                         control_word |= (1 << PC_INC) | (1 << nMPC_RST)
-
-                elif microstep == 3: # Load low byte into MARL and pc++
-                        control_word |= (1 << nIRD_OE) | (1 << nMARL_LD) | (1 << PC_INC)
-
-                elif microstep == 4: # Load destination from MAR into PC
-                    control_word |= (1 << PC_OE) | (1 << nPC_LD) | (1 << nMAR_OE) | (1 << nMPC_RST)
+                    elif microstep == 3: # PC <- J_REG:IR[7:0]
+                        control_word |= (1 << PC_OE) | (1 << nIRA_OE) | (1 << nJ_OE) | (1 << nPC_LD) | (1 << nMPC_RST)
+                elif microstep == 2: # not taken: skip the second word and finish (3 cycles total)
+                    control_word |= (1 << PC_INC) | (1 << nMPC_RST)
 
             elif base_opcode == 28:  # JCC XY
                 if microstep == 1:
@@ -325,27 +316,23 @@ def gen_microcode():
 
             elif base_opcode == 29:  # Unconditional jumps & calls (direct and indirect)
                 if sub_opcode == 0: # JMP imm16 (same as a taken JCC imm16)
-                    if microstep == 1: # load high byte into marh (and pc++ automatically)
-                        control_word |= (1 << nIRD_OE) | (1 << nMARH_LD)
-                    elif microstep == 2: # read second word and store in instruction register
+                    if microstep == 1: # the high byte of the target into J_REG (and pc++ automatically)
+                        control_word |= (1 << nIRD_OE) | (1 << nJ_LD)
+                    elif microstep == 2: # read the second word into the IR
                         control_word |= (1 << MEM_RD) | (1 << nIRH_LD) | (1 << nIRL_LD)
-                    elif microstep == 3: # load low byte into marl
-                        control_word |= (1 << nIRD_OE) | (1 << nMARL_LD)
-                    elif microstep == 4: # load destination from MAR into PC
-                        control_word |= (1 << PC_OE) | (1 << nPC_LD) | (1 << nMAR_OE) | (1 << nMPC_RST)
-                elif sub_opcode == 1: # CALL imm16
-                    if microstep == 1: # load high byte into marh (and pc++ automatically)
-                        control_word |= (1 << nIRD_OE) | (1 << nMARH_LD)
-                    elif microstep == 2: # read second word and store in instruction register
-                        control_word |= (1 << MEM_RD) | (1 << nIRH_LD) | (1 << nIRL_LD)
-                    elif microstep == 3: # load low byte into marl and pc++ (pc is now the return address)
-                        control_word |= (1 << nIRD_OE) | (1 << nMARL_LD) | (1 << PC_INC)
-                    elif microstep == 4: # push PCH
+                    elif microstep == 3: # PC <- J_REG:IR[7:0]
+                        control_word |= (1 << PC_OE) | (1 << nIRA_OE) | (1 << nJ_OE) | (1 << nPC_LD) | (1 << nMPC_RST)
+                elif sub_opcode == 1: # CALL imm16 (same as a taken CALLcc)
+                    if microstep == 1: # the high byte of the target into J_REG (and pc++ automatically)
+                        control_word |= (1 << nIRD_OE) | (1 << nJ_LD)
+                    elif microstep == 2: # read the second word into the IR, and pc++ (pc is now the return address)
+                        control_word |= (1 << MEM_RD) | (1 << nIRH_LD) | (1 << nIRL_LD) | (1 << PC_INC)
+                    elif microstep == 3: # push PCH
                         control_word |= (1 << PC_OE) | (1 << nPCH_OE) | (1 << nSP_OE) | (1 << nSP_INC) | (1 << SP_DIR) | (1 << MEM_WR)
-                    elif microstep == 5: # push PCL
+                    elif microstep == 4: # push PCL
                         control_word |= (1 << PC_OE) | (1 << nPCL_OE) | (1 << nSP_OE) | (1 << nSP_INC) | (1 << SP_DIR) | (1 << MEM_WR)
-                    elif microstep == 6: # load destination from MAR into PC
-                        control_word |= (1 << PC_OE) | (1 << nPC_LD) | (1 << nMAR_OE) | (1 << nMPC_RST)
+                    elif microstep == 5: # PC <- J_REG:IR[7:0]
+                        control_word |= (1 << PC_OE) | (1 << nIRA_OE) | (1 << nJ_OE) | (1 << nPC_LD) | (1 << nMPC_RST)
                 elif sub_opcode == 2: # JMP MAR
                     if microstep == 1:
                         control_word |= (1 << PC_OE) | (1 << nPC_LD) | (1 << nMAR_OE) | (1 << nMPC_RST)

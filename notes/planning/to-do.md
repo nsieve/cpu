@@ -19,7 +19,6 @@ These can still change the hardware, so they go first.
 In Digital.
 
 - map the 7 generic gates in `CPU.dig`, `MAR.dig` and `SP.dig` to real chips
-- the jump latch: holds the high byte of a direct jump's target, so `JMP`, `JCC` and `CALL label` don't go through the MAR anymore (and take 4 cycles instead of 5 when they jump)
 - add whatever the decisions add (keyboard, SPI shifter, timer)
 - draw the clock (the three 555s) as a schematic
 
@@ -32,7 +31,8 @@ In Digital.
 ## Docs
 
 - the items left in `docs-audit.md`
-- a design-decisions doc for the new instructions: the ALU with memory (and the brackets), the auto-increments, `CALLcc` / `RETcc`, and why `POP XY` is only a pseudo-instruction
+- a design-decisions doc for the new instructions: the ALU with memory (and the brackets), the auto-increments, `CALLcc` / `RETcc`, why `POP XY` is only a pseudo-instruction, the shift into carry (the 74157) and the jump register (2 chips so the direct jumps don't need the MAR)
+- a screenshot of `J_REG.dig` for `jump_register.md`
 - the template sections the module docs are missing: pinouts, verification (pointing to `digital/tests/`) and physical TTL mapping. The table at the end of `docs-audit.md` says which doc lacks what
 - finish the program counter doc
 - rewrite the instruction decoding to make it easier to understand
@@ -44,7 +44,7 @@ In Digital.
 	- the memory map: RAM first (for the zero page) instead of ROM first, and the address decoder redesign
 	- the power-on race conditions
 	- the old PC and SP versions in `digital/discarded/` (less important)
-- README: the SFD-8 isn't my thesis anymore, the chip count (80 in the simulation), the block diagram (from my drawing) and the status list
+- README: the SFD-8 isn't my thesis anymore, the block diagram (from my drawing) and the status list
 - fill in the placeholders in `picking-back-up.md`
 
 ## Cleanup

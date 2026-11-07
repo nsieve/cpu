@@ -15,7 +15,7 @@ OPC  Z C N V nMPC_RST nHALT CLK nRST C0_15 C16_31 C32_47
 
 ## the micro-PC counts from 0 after the reset
 OPC  Z C N V nMPC_RST nHALT CLK nRST C0_15 C16_31 C32_47
-# JMP label (opcode 0xE8) has 5 different steps
+# JMP label (opcode 0xE8): steps 0-3, and step 4 is empty (every bit inactive)
 0xE8 0 0 0 0 1        1     C   0    {reset}
 0xE8 0 0 0 0 1        1     0   1    {cw 0xE8 0 0}
 0xE8 0 0 0 0 1        1     C   1    {cw 0xE8 1 0}
@@ -39,7 +39,7 @@ OPC  Z C N V nMPC_RST nHALT CLK nRST C0_15 C16_31 C32_47
 OPC  Z C N V nMPC_RST nHALT CLK nRST C0_15 C16_31 C32_47
 0xDA 0 0 0 0 1        1     C   0    {reset}
 0xDA 0 0 0 0 1        1     0   1    {cw 0xDA 0 0}
-# JZ label, step 1: it only loads the MAR if Z = 1
+# JZ label, step 1: it only loads J_REG if Z = 1
 0xDA 0 0 0 0 1        1     C   1    {cw 0xDA 1 0}
 0xDA 1 0 0 0 1        1     0   1    {cw 0xDA 1 1}
 # ADC A, B, step 1: ALU_CIN follows C

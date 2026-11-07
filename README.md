@@ -17,7 +17,7 @@ An 8-bit CPU designed from scratch and built entirely from 74HC logic chips.
 - Most instructions take 2 cycles, because the fetch of the next instruction overlaps with the execution of the current one
 - 47.75 KB of RAM (1 KB of it for the framebuffer), 16 KB of ROM and 256 bytes of memory-mapped I/O
 - I/O: keyboard, 8 LEDs and an SPI port (a MAX7219 7-segment display for now, an OLED later)
-- 77 logic chips so far (plus RAM, ROM and the three EPROMs)
+- 84 logic chips in the simulation so far (plus RAM, ROM and the three EPROMs)
 - Designed and simulated in [Digital](https://github.com/hneemann/Digital), and being built on breadboards
 
 ## About the Project
@@ -63,6 +63,7 @@ The main modules are:
 | [Instruction Register](notes/hardware-design/instregister.md)  | 16-bit IR                                                 |  Done   |
 | [Control Unit](notes/hardware-design/controlunit.md)           | Microcode EPROMs and the micro-PC                         |  Done   |
 | [Address Buffers](notes/hardware-design/address_buffers.md)    | Hardwired `0x00` (zero page) and `0xC000` (reset vector)  |  Done   |
+| [Jump Register](notes/hardware-design/jump_register.md)        | High byte of a direct jump's target                       | Partial |
 | MMIO                                                           | Memory-mapped I/O registers                               |  To do  |
 
 Instruction set:

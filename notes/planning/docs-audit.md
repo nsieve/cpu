@@ -83,9 +83,10 @@ Everything matches `IR.dig` (2 74377, 2 74245, the fields and the signals). Miss
 
 | Kind | Where | It says | The circuit / code | Fix |
 | ---- | ----- | ------- | ------------------ | --- |
-| Wrong | Operations | JCC MAR uses `nMAR_OE` | There's no `JCC MAR` (`issues.md`). `nMAR_OE` is used by `LD`/`ST MAR`, `JMP MAR`, `CALL MAR`, `MOV SP, MAR`, and the last step of the direct jumps, calls and `RET` | list those |
-| Missing | Operations | - | The direct jumps and calls load MARH and MARL from the IR, `RET` loads them from the stack, and `MOV MAR, SP` from the SP, so the MAR is lost after them | add them |
-| Wrong | Overview | the MAR isn't programmer-visible, the CPU uses it automatically, also for pseudoinstructions | Programs load and use it directly (`MOV MARL/MARH`, `LD`/`ST MAR`, `INC`/`DEC MAR`, `JMP`/`CALL MAR`). What's automatic is that the direct jumps, calls and `RET` overwrite it, and those are native instructions, not pseudoinstructions | rewrite that paragraph |
+| Wrong | Operations | JCC MAR uses `nMAR_OE` | There's no `JCC MAR` (`issues.md`). `nMAR_OE` is used by `LD`/`ST MAR` (and `MAR+`), `JMP MAR`, `CALL MAR`, `MOV SP, MAR`, and the last step of `RET` and `RETcc` | list those |
+| Missing | Operations | - | `RET` and `RETcc` load MARL and MARH from the stack, and `MOV MAR, SP` from the SP, so the MAR is lost after them. The direct jumps and calls don't touch it anymore (`J_REG`) | add them |
+| Wrong | Overview | the MAR isn't programmer-visible, the CPU uses it automatically, also for pseudoinstructions | Programs load and use it directly (`MOV MARL/MARH`, `LD`/`ST MAR`, `INC`/`DEC MAR`, `JMP`/`CALL MAR`). What's automatic is that `RET` overwrites it, and that's a native instruction, not a pseudoinstruction | rewrite that paragraph |
+| Wrong | Overview | without the MAR the CPU couldn't do 16-bit jumps | The direct jumps use `J_REG` and the IR, and `JMP XY` uses XY. The MAR is for `JMP MAR`, `CALL MAR` and `RET` | say which jumps use it |
 | Wrong | Timing | the outputs only change on the rising edge | That's true when it counts. The load is asynchronous (74191), ORed with CLK, so a load happens while CLK is low (`74191-loadsync.md`) | add the load |
 | Missing | whole doc | - | The 2 generic OR gates of the load (a 7432 on the breadboard), and a chip table | template section 6 |
 
@@ -199,9 +200,7 @@ Everything matches (step 1 always has `PC_INC`, the exceptions, the cycles).
 
 ### issues.md
 
-| Kind | Where | It says | The circuit / code | Fix |
-| ---- | ----- | ------- | ------------------ | --- |
-| Unclear | Limitations, the MAR | the MAR is lost after `JCC label` | Only when the jump is taken: a jump that isn't taken never touches the MAR | "after a taken `JCC label`" |
+Nothing left: since the jump register, only `RET` and `RETcc` lose the MAR, and the row says so.
 
 ### ideas.md
 
@@ -230,6 +229,7 @@ The 6 sections of `doc-template.md`: overview and pinouts, architecture, control
 | `instregister.md` | yes | part | yes | yes | yes | no | yes |
 | `controlunit.md` | yes | yes | yes | yes | yes | no | yes |
 | `reset.md` | yes | yes | yes | yes | yes | no | yes |
+| `jump_register.md` | yes | yes | part (no screenshot) | yes | yes | yes | yes |
 | MMIO | no doc yet | | | | | | |
 
 Verification is missing everywhere, but now it's an easy one: every module has its test file in `digital/tests/` (`MODULE_tests.txt`, all passing), so each doc can point to it and to `verification.md`. Most docs also lack a pin table, which `digital/tests/` can help with too: the header line of each test file lists every pin of the module.

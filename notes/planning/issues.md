@@ -22,7 +22,7 @@ Not bugs, these are on purpose (or the price of something else), but they're eas
 
 | Limitation | Why |
 | ---------- | --- |
-| The MAR is lost after `JMP label`, `JCC label`, `CALL label`, `CALLcc label`, `RET` and `RETcc` | They use it to hold the target address. See `design-decisions/jumps.md`. |
+| The MAR is lost after `RET` and `RETcc` | They pop the return address into the MAR before loading it into the PC (after `RETcc` only when it returns). The direct jumps and calls don't touch it, they use `J_REG`. See `design-decisions/jumps.md`. |
 | No `JCC MAR` | Only `JCC XY` and `JCC label`. |
 | Shifts don't update Z and N | `SHR`/`ROR` use their own buffer, not the ALU, so they only load C (the bit shifted out) and V (cleared). (`SHL` and `ROL` are really `ADD A, A` and `ADC A, A`, so they update all four.) |
 | `INC A` / `DEC A` need the immediate to be `0x00` | They add the IR's low byte. The assembler always leaves it at 0. |

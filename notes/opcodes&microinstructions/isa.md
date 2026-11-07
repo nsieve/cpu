@@ -72,22 +72,22 @@ Cycles count every microstep, including the fetch (step 0).
 | RETNN         |  0x19  |  0x5  | if (N == 0):<br>SP + 2<br>PC <-- Mem[SP] |    -    | 5 / 2  |
 | RETV          |  0x19  |  0x6  | if (V == 1):<br>SP + 2<br>PC <-- Mem[SP] |    -    | 5 / 2  |
 | RETNV         |  0x19  |  0x7  | if (V == 0):<br>SP + 2<br>PC <-- Mem[SP] |    -    | 5 / 2  |
-| CALLC label   |  0x1A  |  0x0  | if (C == 1):<br>Mem[SP] <-- PC<br>SP - 2<br>PC <-- imm16 |    -    | 7 / 3  |
-| CALLNC label  |  0x1A  |  0x1  | if (C == 0):<br>Mem[SP] <-- PC<br>SP - 2<br>PC <-- imm16 |    -    | 7 / 3  |
-| CALLZ label   |  0x1A  |  0x2  | if (Z == 1):<br>Mem[SP] <-- PC<br>SP - 2<br>PC <-- imm16 |    -    | 7 / 3  |
-| CALLNZ label  |  0x1A  |  0x3  | if (Z == 0):<br>Mem[SP] <-- PC<br>SP - 2<br>PC <-- imm16 |    -    | 7 / 3  |
-| CALLN label   |  0x1A  |  0x4  | if (N == 1):<br>Mem[SP] <-- PC<br>SP - 2<br>PC <-- imm16 |    -    | 7 / 3  |
-| CALLNN label  |  0x1A  |  0x5  | if (N == 0):<br>Mem[SP] <-- PC<br>SP - 2<br>PC <-- imm16 |    -    | 7 / 3  |
-| CALLV label   |  0x1A  |  0x6  | if (V == 1):<br>Mem[SP] <-- PC<br>SP - 2<br>PC <-- imm16 |    -    | 7 / 3  |
-| CALLNV label  |  0x1A  |  0x7  | if (V == 0):<br>Mem[SP] <-- PC<br>SP - 2<br>PC <-- imm16 |    -    | 7 / 3  |
-| JC label      |  0x1B  |  0x0  |       if (C == 1):<br>PC <-- imm16       |    -    | 5 / 3  |
-| JNC label     |  0x1B  |  0x1  |       if (C == 0):<br>PC <-- imm16       |    -    | 5 / 3  |
-| JZ label      |  0x1B  |  0x2  |       if (Z == 1):<br>PC <-- imm16       |    -    | 5 / 3  |
-| JNZ label     |  0x1B  |  0x3  |       if (Z == 0):<br>PC <-- imm16       |    -    | 5 / 3  |
-| JN label      |  0x1B  |  0x4  |       if (N == 1):<br>PC <-- imm16       |    -    | 5 / 3  |
-| JNN label     |  0x1B  |  0x5  |       if (N == 0):<br>PC <-- imm16       |    -    | 5 / 3  |
-| JV label      |  0x1B  |  0x6  |       if (V == 1):<br>PC <-- imm16       |    -    | 5 / 3  |
-| JNV label     |  0x1B  |  0x7  |       if (V == 0):<br>PC <-- imm16       |    -    | 5 / 3  |
+| CALLC label   |  0x1A  |  0x0  | if (C == 1):<br>Mem[SP] <-- PC<br>SP - 2<br>PC <-- imm16 |    -    | 6 / 3  |
+| CALLNC label  |  0x1A  |  0x1  | if (C == 0):<br>Mem[SP] <-- PC<br>SP - 2<br>PC <-- imm16 |    -    | 6 / 3  |
+| CALLZ label   |  0x1A  |  0x2  | if (Z == 1):<br>Mem[SP] <-- PC<br>SP - 2<br>PC <-- imm16 |    -    | 6 / 3  |
+| CALLNZ label  |  0x1A  |  0x3  | if (Z == 0):<br>Mem[SP] <-- PC<br>SP - 2<br>PC <-- imm16 |    -    | 6 / 3  |
+| CALLN label   |  0x1A  |  0x4  | if (N == 1):<br>Mem[SP] <-- PC<br>SP - 2<br>PC <-- imm16 |    -    | 6 / 3  |
+| CALLNN label  |  0x1A  |  0x5  | if (N == 0):<br>Mem[SP] <-- PC<br>SP - 2<br>PC <-- imm16 |    -    | 6 / 3  |
+| CALLV label   |  0x1A  |  0x6  | if (V == 1):<br>Mem[SP] <-- PC<br>SP - 2<br>PC <-- imm16 |    -    | 6 / 3  |
+| CALLNV label  |  0x1A  |  0x7  | if (V == 0):<br>Mem[SP] <-- PC<br>SP - 2<br>PC <-- imm16 |    -    | 6 / 3  |
+| JC label      |  0x1B  |  0x0  |       if (C == 1):<br>PC <-- imm16       |    -    | 4 / 3  |
+| JNC label     |  0x1B  |  0x1  |       if (C == 0):<br>PC <-- imm16       |    -    | 4 / 3  |
+| JZ label      |  0x1B  |  0x2  |       if (Z == 1):<br>PC <-- imm16       |    -    | 4 / 3  |
+| JNZ label     |  0x1B  |  0x3  |       if (Z == 0):<br>PC <-- imm16       |    -    | 4 / 3  |
+| JN label      |  0x1B  |  0x4  |       if (N == 1):<br>PC <-- imm16       |    -    | 4 / 3  |
+| JNN label     |  0x1B  |  0x5  |       if (N == 0):<br>PC <-- imm16       |    -    | 4 / 3  |
+| JV label      |  0x1B  |  0x6  |       if (V == 1):<br>PC <-- imm16       |    -    | 4 / 3  |
+| JNV label     |  0x1B  |  0x7  |       if (V == 0):<br>PC <-- imm16       |    -    | 4 / 3  |
 | JC XY         |  0x1C  |  0x0  |        if (C == 1):<br>PC <-- XY         |    -    |   2    |
 | JNC XY        |  0x1C  |  0x1  |        if (C == 0):<br>PC <-- XY         |    -    |   2    |
 | JZ XY         |  0x1C  |  0x2  |        if (Z == 1):<br>PC <-- XY         |    -    |   2    |
@@ -96,8 +96,8 @@ Cycles count every microstep, including the fetch (step 0).
 | JNN XY        |  0x1C  |  0x5  |        if (N == 0):<br>PC <-- XY         |    -    |   2    |
 | JV XY         |  0x1C  |  0x6  |        if (V == 1):<br>PC <-- XY         |    -    |   2    |
 | JNV XY        |  0x1C  |  0x7  |        if (V == 0):<br>PC <-- XY         |    -    |   2    |
-| JMP label     |  0x1D  |  0x0  |               PC <-- imm16               |    -    |   5    |
-| CALL label    |  0x1D  |  0x1  | Mem[SP] <-- PC<br>SP - 2<br>PC <-- imm16 |    -    |   7    |
+| JMP label     |  0x1D  |  0x0  |               PC <-- imm16               |    -    |   4    |
+| CALL label    |  0x1D  |  0x1  | Mem[SP] <-- PC<br>SP - 2<br>PC <-- imm16 |    -    |   6    |
 | JMP MAR       |  0x1D  |  0x2  |                PC <-- MAR                |    -    |   2    |
 | JMP XY        |  0x1D  |  0x3  |                PC <-- XY                 |    -    |   2    |
 | CALL MAR      |  0x1D  |  0x4  |  Mem[SP] <-- PC<br>SP - 2<br>PC <-- MAR  |    -    |   5    |
@@ -116,12 +116,13 @@ Cycles count every microstep, including the fetch (step 0).
 | POPF          |  0x1F  |  0x6  |     SP <-- SP + 1<br>FR <-- Mem[SP]      | Z,C,N,V |   3    |
 | HALT          |  0x1F  |  0x7  |           freeze the micro-PC            |    -    |   3    |
 
-`5 / 3` on the conditional jumps means 5 cycles if the jump is taken and 3 if it isn't (it just skips the second word). The conditional calls (`7 / 3`) and returns (`5 / 2`) work the same way.
+`4 / 3` on the conditional jumps means 4 cycles if the jump is taken and 3 if it isn't (it just skips the second word). The conditional calls (`6 / 3`) and returns (`5 / 2`) work the same way.
 
 ### Notes
 
 - Condition codes (subOp of 0x19, 0x1A, 0x1B and 0x1C): 0 = C, 1 = NC, 2 = Z, 3 = NZ, 4 = N, 5 = NN, 6 = V, 7 = NV. There is no `JCC MAR`, only `JCC XY` and `JCC label`, and the conditional calls only exist with a label (`CALLZ label`).
-- Direct jumps and calls (`JMP label`, `JCC label`, `CALL label`, `CALLcc label`) are 2-word instructions: word 1 has the opcode + the high byte of the target, word 2 has the opcode + the low byte. The CPU uses the MAR to hold the target before loading it into the PC, so whatever was in the MAR is lost after a direct jump or call (and after `RET` and `RETcc` too, which also go through the MAR). For the conditional ones, only when they're taken. More about this in `design-decisions/jumps.md`.
+- Direct jumps and calls (`JMP label`, `JCC label`, `CALL label`, `CALLcc label`) are 2-word instructions: word 1 has the opcode + the high byte of the target, word 2 has the opcode + the low byte. The high byte waits in the jump register (`J_REG`) while word 2 is fetched, and in the last step `J_REG` drives the high byte of the address bus and the IR the low byte, and the PC loads that. So they don't touch the MAR. More about this in `design-decisions/jumps.md`.
+- `RET` and `RETcc` pop the return address into the MAR before loading it into the PC, so whatever was in the MAR is lost after them (after `RETcc` only when it returns).
 - CALL pushes PCH first and then PCL, so `RET` pops PCL first and then PCH. The pushed PC is always the address of the instruction right after the CALL.
 - ST Imm and LD Imm keep the register in bits `[10:8]`, because the whole lower byte is the zero-page address. For the store, the control bit `SRC_SEL` makes the source decoder read the register from `[10:8]` instead of `[7:5]`. More about this in `design-decisions/st-zeropage.md`.
 - CP does the same as SUB, but only updates the flags, A is not written.
